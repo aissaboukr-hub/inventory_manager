@@ -17,29 +17,31 @@ class DatabaseService {
 
   Future<void> init() async => await database;
 
-  // Méthode pour initialiser la base de données
+  // Initialisation de la base de données
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'inventory_manager.db');
 
-    // Ouvre la base de données en mode configuration
-    return await openDatabase(
+    // Ouvre la base de données et configure le PRAGMA en mode WAL après l'ouverture
+    final db = await openDatabase(
       path,
       version: 1,
       onCreate: _onCreate,
       onConfigure: (db) async {
-        // Assurez-vous que les PRAGMA sont exécutées correctement avant toute requête
-        await db.execute('PRAGMA journal_mode=WAL'); // Active le mode WAL
-        await db.execute('PRAGMA synchronous=NORMAL'); // Configure la synchronisation
-        await db.execute('PRAGMA cache_size=10000'); // Configure la taille du cache
-        await db.execute('PRAGMA foreign_keys=ON'); // Active les clés étrangères
+        // Configurez PRAGMA après que la base de données soit complètement ouverte
+        await db.execute('PRAGMA journal_mode=WAL');
+        await db.execute('PRAGMA synchronous=NORMAL');
+        await db.execute('PRAGMA cache_size=10000');
+        await db.execute('PRAGMA foreign_keys=ON');
       },
     );
+    
+    return db;
   }
 
-  // Création des tables et des indices lors de la création de la base de données
+  // Création des tables
   Future<void> _onCreate(Database db, int version) async {
-    // Création de la table des produits
+    // Table des produits
     await db.execute('''
       CREATE TABLE products (
         code      TEXT PRIMARY KEY,
@@ -48,11 +50,11 @@ class DatabaseService {
       )
     ''');
 
-    // Création d'index pour améliorer les performances des requêtes
+    // Index pour la table des produits
     await db.execute('CREATE INDEX idx_product_barcode ON products(barcode)');
     await db.execute('CREATE INDEX idx_product_designation ON products(designation)');
 
-    // Création de la table des inventaires
+    // Table des inventaires
     await db.execute('''
       CREATE TABLE inventories (
         id         TEXT PRIMARY KEY,
@@ -62,7 +64,7 @@ class DatabaseService {
       )
     ''');
 
-    // Création de la table des entrées d'inventaire
+    // Table des entrées d'inventaire
     await db.execute('''
       CREATE TABLE inventory_entries (
         id           TEXT PRIMARY KEY,
@@ -76,34 +78,33 @@ class DatabaseService {
       )
     ''');
 
-    // Création des indices pour les entrées d'inventaire
+    // Création des index pour les entrées d'inventaire
     await db.execute('CREATE INDEX idx_entry_inventory ON inventory_entries(inventory_id)');
     await db.execute('CREATE INDEX idx_entry_barcode ON inventory_entries(barcode)');
   }
 
   // ─── PRODUCTS ──────────────────────────────────────────────────────────────
 
-  /// Méthode d'insertion par batch optimisée avec des transactions
+  // Insère ou met à jour les produits par lot
   Future<int> batchInsertProducts(List<Product> products) async {
     final db = await database;
-    const chunkSize = 500; // Taille des morceaux pour l'insertion par lot
+    const chunkSize = 500;
     int total = 0;
 
-    // Diviser les produits en morceaux pour optimiser l'insertion
+    // Insertion par morceaux
     for (int i = 0; i < products.length; i += chunkSize) {
       final chunk = products.sublist(i, (i + chunkSize).clamp(0, products.length));
 
-      // Utilisation d'une transaction pour insérer les produits en batch
       await db.transaction((txn) async {
         final batch = txn.batch();
         for (final p in chunk) {
           batch.insert(
             'products',
             p.toMap(),
-            conflictAlgorithm: ConflictAlgorithm.replace, // Remplacer en cas de conflit
+            conflictAlgorithm: ConflictAlgorithm.replace,
           );
         }
-        await batch.commit(noResult: true); // Exécuter le batch sans attendre un résultat
+        await batch.commit(noResult: true);
         total += chunk.length;
       });
     }
@@ -119,7 +120,7 @@ class DatabaseService {
       whereArgs: [barcode],
       limit: 1,
     );
-    return rows.isEmpty ? null : Product.fromMap(rows.first); // Retourne le produit trouvé ou null
+    return rows.isEmpty ? null : Product.fromMap(rows.first);
   }
 
   // Recherche un produit par son code
@@ -131,30 +132,30 @@ class DatabaseService {
       whereArgs: [code],
       limit: 1,
     );
-    return rows.isEmpty ? null : Product.fromMap(rows.first); // Retourne le produit trouvé ou null
+    return rows.isEmpty ? null : Product.fromMap(rows.first);
   }
 
   // Recherche des produits avec un filtre de texte
   Future<List<Product>> searchProducts(String query, {int limit = 50}) async {
     final db = await database;
-    final q = '%$query%'; // Création d'un motif de recherche
+    final q = '%$query%'; // Motif pour la recherche
     final rows = await db.query(
       'products',
       where: 'designation LIKE ? OR code LIKE ? OR barcode LIKE ?',
       whereArgs: [q, q, q],
       limit: limit,
     );
-    return rows.map(Product.fromMap).toList(); // Retourne la liste des produits trouvés
+    return rows.map(Product.fromMap).toList();
   }
 
   // Récupère le nombre total de produits
   Future<int> getProductCount() async {
     final db = await database;
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM products');
-    return (result.first['count'] as int?) ?? 0; // Retourne le nombre de produits
+    return (result.first['count'] as int?) ?? 0;
   }
 
-  // Insère ou met à jour un produit dans la base de données
+  // Insère ou met à jour un produit
   Future<void> insertOrUpdateProduct(Product product) async {
     final db = await database;
     await db.insert(
@@ -172,13 +173,13 @@ class DatabaseService {
 
   // ─── INVENTORIES ───────────────────────────────────────────────────────────
 
-  // Insère un nouvel inventaire dans la base de données
+  // Insère un inventaire
   Future<void> insertInventory(Inventory inv) async {
     final db = await database;
     await db.insert('inventories', inv.toMap());
   }
 
-  // Récupère tous les inventaires avec le nombre d'entrées associés
+  // Récupère tous les inventaires
   Future<List<Inventory>> getAllInventories() async {
     final db = await database;
     final rows = await db.rawQuery(''' 
@@ -188,7 +189,7 @@ class DatabaseService {
       GROUP BY i.id
       ORDER BY i.created_at DESC
     ''');
-    return rows.map(Inventory.fromMap).toList(); // Retourne la liste des inventaires
+    return rows.map(Inventory.fromMap).toList();
   }
 
   // Met à jour le nom d'un inventaire
@@ -202,7 +203,7 @@ class DatabaseService {
     );
   }
 
-  // Ferme un inventaire en le marquant comme inactif
+  // Ferme un inventaire
   Future<void> closeInventory(String id) async {
     final db = await database;
     await db.update(
@@ -231,7 +232,7 @@ class DatabaseService {
     );
   }
 
-  // Récupère les entrées d'un inventaire spécifique
+  // Récupère les entrées d'inventaire pour un inventaire spécifique
   Future<List<InventoryEntry>> getEntriesByInventory(
       String inventoryId) async {
     final db = await database;
@@ -241,7 +242,7 @@ class DatabaseService {
       whereArgs: [inventoryId],
       orderBy: 'date DESC',
     );
-    return rows.map(InventoryEntry.fromMap).toList(); // Retourne la liste des entrées
+    return rows.map(InventoryEntry.fromMap).toList();
   }
 
   // Met à jour la quantité d'une entrée d'inventaire
@@ -261,7 +262,7 @@ class DatabaseService {
     await db.delete('inventory_entries', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Récupère les totaux des quantités par produit pour un inventaire donné
+  // Récupère les totaux des quantités par produit pour un inventaire
   Future<List<Map<String, dynamic>>> getTotalsByInventory(
       String inventoryId) async {
     final db = await database;
