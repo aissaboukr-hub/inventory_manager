@@ -40,7 +40,21 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Changement de la méthode pour retourner un Stream
+  // Méthode saveProduct pour ajouter ou mettre à jour un produit
+  Future<void> saveProduct(Product product) async {
+    await _db.insertOrUpdateProduct(product);  // Insérer ou mettre à jour un produit dans la base de données
+    await loadProductCount();  // Mettre à jour le nombre de produits
+    notifyListeners();  // Notifier les écouteurs pour mettre à jour l'UI
+  }
+
+  Future<void> deleteProduct(String code) async {
+    await _db.deleteProduct(code);
+    await loadProductCount();
+    _searchResults.removeWhere((p) => p.code == code);
+    notifyListeners();
+  }
+
+  // Méthodes d'importation
   Stream<double> importFromExcel() async* {
     _loading = true;
     _importStatus = 'Lecture du fichier…';
@@ -62,12 +76,11 @@ class ProductProvider extends ChangeNotifier {
     await loadProductCount();
     notifyListeners();
 
-    // Utilisez un stream pour émettre la progression à chaque étape
     for (double i = 0; i <= 1; i += 0.1) {
-      yield i;
+      yield i; // Simuler la progression
     }
 
-    yield 1.0;  // Fin de la progression
+    yield 1.0; // Fin de la progression
   }
 
   Future<ImportResult> importFromGoogleSheets({
