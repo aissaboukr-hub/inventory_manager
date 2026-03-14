@@ -25,6 +25,7 @@ class DatabaseService {
       version: 1,
       onCreate: _onCreate,
       onConfigure: (db) async {
+        // Assurez-vous que les PRAGMA sont exécutées correctement avant toute requête
         await db.execute('PRAGMA journal_mode=WAL');
         await db.execute('PRAGMA synchronous=NORMAL');
         await db.execute('PRAGMA cache_size=10000');
@@ -74,7 +75,6 @@ class DatabaseService {
 
   // ─── PRODUCTS ──────────────────────────────────────────────────────────────
 
-  /// Batch insert optimisé — transactions par chunks de 500
   Future<int> batchInsertProducts(List<Product> products) async {
     final db = await database;
     const chunkSize = 500;
@@ -164,7 +164,7 @@ class DatabaseService {
 
   Future<List<Inventory>> getAllInventories() async {
     final db = await database;
-    final rows = await db.rawQuery('''
+    final rows = await db.rawQuery(''' 
       SELECT i.*, COUNT(e.id) as entry_count
       FROM inventories i
       LEFT JOIN inventory_entries e ON e.inventory_id = i.id
@@ -237,11 +237,10 @@ class DatabaseService {
     await db.delete('inventory_entries', where: 'id = ?', whereArgs: [id]);
   }
 
-  /// Totaux par produit pour un inventaire
   Future<List<Map<String, dynamic>>> getTotalsByInventory(
       String inventoryId) async {
     final db = await database;
-    return await db.rawQuery('''
+    return await db.rawQuery(''' 
       SELECT product_code, designation, barcode, SUM(quantity) as total_quantity
       FROM inventory_entries
       WHERE inventory_id = ?
