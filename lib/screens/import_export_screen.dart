@@ -217,19 +217,35 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
     );
   }
 
+  // Correction de l'importation Excel
   Future<void> _importExcel(BuildContext context) async {
-    final result =
-        await context.read<ProductProvider>().importFromExcel();
-    if (context.mounted) {
+    final productProvider = context.read<ProductProvider>();
+
+    try {
+      // Simuler l'importation avec feedback de progression
+      await for (var progress in productProvider.importFromExcel()) {
+        setState(() {
+          productProvider.importProgress = progress;
+        });
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(result.message),
-        backgroundColor:
-            result.success ? AppTheme.success : AppTheme.error,
+        content: Text(productProvider.importStatus),
+        backgroundColor: productProvider.importStatusSuccess
+            ? AppTheme.success
+            : AppTheme.error,
+        duration: const Duration(seconds: 4),
+      ));
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur lors de l\'importation: $error'),
+        backgroundColor: AppTheme.error,
         duration: const Duration(seconds: 4),
       ));
     }
   }
 
+  // Correction de l'importation Google Sheets
   Future<void> _importSheets(BuildContext context) async {
     final scriptUrl = _scriptUrlCtrl.text.trim();
     final sheetUrl = _sheetUrlCtrl.text.trim();
@@ -239,20 +255,28 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
       );
       return;
     }
-    final result =
-        await context.read<ProductProvider>().importFromGoogleSheets(
-              scriptUrl: scriptUrl,
-              sheetUrl: sheetUrl,
-            );
-    if (context.mounted) {
+
+    try {
+      final result =
+          await context.read<ProductProvider>().importFromGoogleSheets(
+                scriptUrl: scriptUrl,
+                sheetUrl: sheetUrl,
+              );
+
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(result.message),
-        backgroundColor:
-            result.success ? AppTheme.success : AppTheme.error,
+        backgroundColor: result.success ? AppTheme.success : AppTheme.error,
+      ));
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur lors de l\'importation: $error'),
+        backgroundColor: AppTheme.error,
+        duration: const Duration(seconds: 4),
       ));
     }
   }
 
+  // Gestion de l'export
   Future<void> _handleExport(
     BuildContext context,
     String action,
@@ -279,13 +303,11 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
         inventoryName: invName,
       );
     }
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(result.message),
-        backgroundColor:
-            result.success ? AppTheme.success : AppTheme.error,
-      ));
-    }
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(result.message),
+      backgroundColor: result.success ? AppTheme.success : AppTheme.error,
+    ));
   }
 }
 
