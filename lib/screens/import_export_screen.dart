@@ -222,12 +222,16 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
     final productProvider = context.read<ProductProvider>();
 
     try {
-      // Simuler l'importation avec feedback de progression
+      // Maintenant, on écoute un stream pour obtenir la progression
       await for (var progress in productProvider.importFromExcel()) {
         setState(() {
           productProvider.importProgress = progress;
         });
       }
+
+      // Si tout se passe bien, mettre à jour le statut
+      productProvider.importStatus = "Importation terminée avec succès!";
+      productProvider.importStatusSuccess = true;
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(productProvider.importStatus),
@@ -237,8 +241,10 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
         duration: const Duration(seconds: 4),
       ));
     } catch (error) {
+      productProvider.importStatus = "Erreur lors de l'importation: $error";
+      productProvider.importStatusSuccess = false;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur lors de l\'importation: $error'),
+        content: Text(productProvider.importStatus),
         backgroundColor: AppTheme.error,
         duration: const Duration(seconds: 4),
       ));
