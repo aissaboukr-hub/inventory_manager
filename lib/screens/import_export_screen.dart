@@ -219,37 +219,38 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
 
   // Correction de l'importation Excel
   Future<void> _importExcel(BuildContext context) async {
-    final productProvider = context.read<ProductProvider>();
+  final productProvider = context.read<ProductProvider>();
 
-    try {
-      // Maintenant, on écoute un stream pour obtenir la progression
-      await for (var progress in productProvider.importFromExcel()) {
-        setState(() {
-          productProvider.importProgress = progress;
-        });
-      }
-
-      // Si tout se passe bien, mettre à jour le statut
-      productProvider.importStatus = "Importation terminée avec succès!";
-      productProvider.importStatusSuccess = true;
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(productProvider.importStatus),
-        backgroundColor: productProvider.importStatusSuccess
-            ? AppTheme.success
-            : AppTheme.error,
-        duration: const Duration(seconds: 4),
-      ));
-    } catch (error) {
-      productProvider.importStatus = "Erreur lors de l'importation: $error";
-      productProvider.importStatusSuccess = false;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(productProvider.importStatus),
-        backgroundColor: AppTheme.error,
-        duration: const Duration(seconds: 4),
-      ));
+  try {
+    // Utilisation de await for pour écouter les mises à jour du Stream
+    await for (var progress in productProvider.importFromExcel()) {
+      setState(() {
+        productProvider.importProgress = progress;
+      });
     }
-  }
+
+    productProvider.importStatus = "Importation terminée avec succès!";
+    productProvider.importStatusSuccess = true;
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(productProvider.importStatus),
+      backgroundColor: productProvider.importStatusSuccess
+          ? AppTheme.success
+          : AppTheme.error,
+      duration: const Duration(seconds: 4),
+    ));
+   } catch (error) {
+    productProvider.importStatus = "Erreur lors de l'importation: $error";
+    productProvider.importStatusSuccess = false;
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(productProvider.importStatus),
+      backgroundColor: AppTheme.error,
+      duration: const Duration(seconds: 4),
+     ));
+   }
+ }
+
 
   // Correction de l'importation Google Sheets
   Future<void> _importSheets(BuildContext context) async {
