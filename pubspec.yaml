@@ -1,0 +1,61 @@
+name: flutter_inventory
+description: "A new Flutter project."
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_localizations:
+    sdk: flutter
+
+  flutter_slidable: ^3.0.0
+
+  flutter_staggered_animations: ^1.1.0
+
+  intl: ^0.20.2
+
+  url_launcher: ^6.1.12
+  
+  # Scanner code-barres
+  mobile_scanner: ^5.0.0
+
+  # Ouvrir fichiers
+  open_filex: ^4.3.2
+
+  # Excel
+  excel: ^2.1.0
+
+  # Sélection de fichiers
+  file_picker: ^8.0.0
+
+  # Chemins fichiers
+  path_provider: ^2.1.2
+  path: ^1.9.0
+
+  # Partage
+  share_plus: ^7.2.1
+
+  # Google Sheets
+  gsheets: ^0.5.0
+
+  # Base de données locale
+  sqflite: ^2.3.2
+
+  # Polices Google
+  google_fonts: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
