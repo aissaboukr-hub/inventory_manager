@@ -40,6 +40,13 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Méthode findByBarcode ajoutée pour rechercher un produit en fonction du code-barres
+  Future<Product?> findByBarcode(String barcode) async {
+    // Recherche dans la base de données
+    final result = await _db.findProductByBarcode(barcode);
+    return result; // Retourne le produit trouvé ou null s'il n'est pas trouvé
+  }
+  
   // Méthode saveProduct pour ajouter ou mettre à jour un produit
   Future<void> saveProduct(Product product) async {
     await _db.insertOrUpdateProduct(product);  // Insérer ou mettre à jour un produit dans la base de données
