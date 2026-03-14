@@ -281,3 +281,149 @@ class _ActiveInventoryScreenState extends State<ActiveInventoryScreen>
     }
   }
 }
+
+// ─── Scanner Tab ──────────────────────────────────────────────────────────────
+class _ScannerTab extends StatelessWidget {
+  final MobileScannerController controller;
+  final bool active;
+  final bool processing;
+  final Future<void> Function(String) onDetect;
+  final VoidCallback onManualAdd;
+
+  const _ScannerTab({
+    required this.controller,
+    required this.active,
+    required this.processing,
+    required this.onDetect,
+    required this.onManualAdd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        MobileScanner(
+          controller: controller,
+          onDetect: (capture) {
+            final barcode = capture.barcodes.firstOrNull?.rawValue;
+            if (barcode != null && !processing) onDetect(barcode);
+          },
+        ),
+        // Overlay viseur
+        Center(
+          child: Container(
+            width: 260,
+            height: 160,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white, width: 2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        // Barre de statut
+        Positioned(
+          bottom: 40,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Text(
+                processing
+                    ? 'Traitement…'
+                    : 'Pointez sur un code-barres',
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 14),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Entries Tab ──────────────────────────────────────────────────────────────
+class _EntriesTab extends StatelessWidget {
+  final List<dynamic> entries;
+  final void Function(String id) onDelete;
+  final void Function(dynamic entry) onEdit;
+
+  const _EntriesTab({
+    required this.entries,
+    required this.onDelete,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (entries.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.inbox_outlined,
+                size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 12),
+            Text('Aucune saisie',
+                style: TextStyle(color: Colors.grey.shade600)),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: entries.length,
+      itemBuilder: (ctx, i) {
+        final entry = entries[i];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: AppTheme.primary.withOpacity(0.1),
+              child: Text(
+                entry.quantity.abs() > 999
+                    ? '∞'
+                    : entry.quantity.toStringAsFixed(
+                        entry.quantity.truncateToDouble() == entry.quantity
+                            ? 0
+                            : 2),
+                style: TextStyle(
+                  color: entry.quantity < 0
+                      ? AppTheme.error
+                      : AppTheme.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            title: Text(entry.designation,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(
+              '${entry.productCode}  •  ${DateFormat('HH:mm').format(entry.date)}',
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 20),
+                  onPressed: () => onEdit(entry),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      size: 20, color: Colors.red),
+                  onPressed: () => onDelete(entry.id),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
