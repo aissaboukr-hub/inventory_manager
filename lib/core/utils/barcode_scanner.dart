@@ -50,6 +50,15 @@ class BarcodeScannerService {
     }
   }
 
+   // ← AJOUTER CETTE MÉTHODE PUBLIQUE
+  Future<void> playBeep() async {
+    await _soundPlayer.playBeep();
+  }
+
+  Future<void> playError() async {
+    await _soundPlayer.playError();
+  }
+
   bool _isValidBarcode(String code) {
     // EAN-8, EAN-13, UPC-A, Code 128, Code 39
     final validPatterns = [

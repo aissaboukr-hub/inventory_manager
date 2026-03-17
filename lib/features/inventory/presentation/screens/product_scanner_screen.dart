@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:inventory_manager/core/utils/barcode_scanner.dart';
+import 'package:inventory_manager/core/utils/sound_player.dart';  // ← AJOUTER CECI
 import 'package:inventory_manager/domain/entities/product.dart';
 import 'package:inventory_manager/domain/repositories/inventory_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -387,9 +388,8 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     }
 
     try {
-      // Jouer le son de confirmation
-      final soundPlayer = SoundPlayer();
-      await soundPlayer.playBeep();
+      // ← CORRIGÉ: Utilisation de _scannerService qui a déjà SoundPlayer
+      await _scannerService.playBeep();  // Ou créer une méthode publique dans BarcodeScannerService
 
       _lastBarcode = code;
       
