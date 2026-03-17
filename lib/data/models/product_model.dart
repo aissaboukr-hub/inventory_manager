@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';  // ← AJOUTER CETTE LIGNE
 import 'package:inventory_manager/data/datasources/local/database.dart';
 import 'package:inventory_manager/domain/entities/product.dart';
 
