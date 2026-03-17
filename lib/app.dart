@@ -27,7 +27,7 @@ class InventoryApp extends StatelessWidget {
           BlocProvider<HomeBloc>(
             create: (context) => HomeBloc(
               repository: context.read<InventoryRepository>(),
-            )..add(const LoadInventoriesEvent()),  // ← const ajouté
+            )..add(LoadInventoriesEvent()),
           ),
         ],
         child: MaterialApp(

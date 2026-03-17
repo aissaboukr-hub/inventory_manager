@@ -1,30 +1,44 @@
 part of 'home_bloc.dart';
 
-abstract class HomeState extends Equatable {
-  const HomeState();
+abstract class HomeEvent extends Equatable {
+  const HomeEvent();  // ← AJOUTER const
 
   @override
   List<Object?> get props => [];
 }
 
-class HomeInitial extends HomeState {}
-
-class HomeLoading extends HomeState {}
-
-class HomeLoaded extends HomeState {
-  final List<Inventory> inventories;
-
-  const HomeLoaded({required this.inventories});
-
-  @override
-  List<Object?> get props => [inventories];
+class LoadInventoriesEvent extends HomeEvent {
+  const LoadInventoriesEvent();  // ← AJOUTER const constructeur
 }
 
-class HomeError extends HomeState {
-  final String message;
+class RefreshInventoriesEvent extends HomeEvent {
+  const RefreshInventoriesEvent();  // ← AJOUTER const constructeur
+}
 
-  const HomeError({required this.message});
+class CreateInventoryEvent extends HomeEvent {
+  final String name;
+  final String? description;
+
+  const CreateInventoryEvent(this.name, {this.description});  // ← const déjà présent
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [name, description];
+}
+
+class UpdateInventoryEvent extends HomeEvent {
+  final Inventory inventory;
+
+  const UpdateInventoryEvent(this.inventory);  // ← const déjà présent
+
+  @override
+  List<Object> get props => [inventory];
+}
+
+class DeleteInventoryEvent extends HomeEvent {
+  final int id;
+
+  const DeleteInventoryEvent(this.id);  // ← const déjà présent
+
+  @override
+  List<Object> get props => [id];
 }
