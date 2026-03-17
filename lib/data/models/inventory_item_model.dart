@@ -1,7 +1,8 @@
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:inventory_manager/data/datasources/local/database.dart' as db;
 import 'package:inventory_manager/data/models/product_model.dart';
 import 'package:inventory_manager/domain/entities/inventory_item.dart' as entity;
+import 'package:inventory_manager/domain/entities/product.dart' as entity;
 
 class InventoryItemModel {
   final int? id;
@@ -24,18 +25,15 @@ class InventoryItemModel {
     this.product,
   });
 
-  // From Drift with product join
-  factory InventoryItemModel.fromDriftWithProduct(
-    db.InventoryItemWithProduct drift,
-  ) {
+  factory InventoryItemModel.fromDriftWithProduct(db.InventoryItemWithProduct drift) {
     return InventoryItemModel(
       id: drift.itemId,
-      inventoryId: 0, // Set from context
+      inventoryId: 0,
       productId: drift.productId,
       quantity: drift.quantity,
       timestamp: drift.timestamp,
       notes: drift.notes,
-      scannedBy: null, // Not in drift, add if needed in database.dart
+      scannedBy: drift.scannedBy,
       product: ProductModel(
         id: drift.productId,
         code: drift.productCode,
@@ -47,21 +45,19 @@ class InventoryItemModel {
     );
   }
 
-  // From domain entity
-  factory InventoryItemModel.fromEntity(entity.InventoryItem entity) {
+  factory InventoryItemModel.fromEntity(entity.InventoryItem e) {
     return InventoryItemModel(
-      id: entity.id,
-      inventoryId: entity.inventoryId,
-      productId: entity.productId,
-      quantity: entity.quantity,
-      timestamp: entity.timestamp,
-      notes: entity.notes,
-      scannedBy: entity.scannedBy,
-      product: entity.product != null ? ProductModel.fromEntity(entity.product!) : null,
+      id: e.id,
+      inventoryId: e.inventoryId,
+      productId: e.productId,
+      quantity: e.quantity,
+      timestamp: e.timestamp,
+      notes: e.notes,
+      scannedBy: e.scannedBy,
+      product: e.product != null ? ProductModel.fromEntity(e.product!) : null,
     );
   }
 
-  // To domain entity
   entity.InventoryItem toEntity() {
     return entity.InventoryItem(
       id: id,
@@ -75,16 +71,15 @@ class InventoryItemModel {
     );
   }
 
-  // To Drift companion
   db.InventoryItemsCompanion toCompanion() {
     return db.InventoryItemsCompanion(
-      id: id != null ? Value(id!) : const Value.absent(),
-      inventoryId: Value(inventoryId),
-      productId: Value(productId),
-      quantity: Value(quantity),
-      timestamp: Value(timestamp),
-      notes: Value(notes),
-      scannedBy: Value(scannedBy),
+      id: id != null ? drift.Value(id!) : const drift.Value.absent(),
+      inventoryId: drift.Value(inventoryId),
+      productId: drift.Value(productId),
+      quantity: drift.Value(quantity),
+      timestamp: drift.Value(timestamp),
+      notes: drift.Value(notes),
+      scannedBy: drift.Value(scannedBy),
     );
   }
 
@@ -138,33 +133,26 @@ class InventoryItemModel {
 
   bool get isPositive => quantity > 0;
   bool get isNegative => quantity < 0;
-  bool get isCorrection => quantity < 0;
-
-  String get formattedQuantity {
-    if (quantity == quantity.toInt()) {
-      return quantity.toInt().toString();
-    }
-    return quantity.toStringAsFixed(2);
-  }
+  String get formattedQuantity => quantity == quantity.toInt() 
+      ? quantity.toInt().toString() 
+      : quantity.toStringAsFixed(2);
 
   @override
-  String toString() {
-    return 'InventoryItemModel(id: $id, productId: $productId, qty: $quantity)';
-  }
+  String toString() => 'InventoryItemModel(id: $id, productId: $productId, qty: $quantity)';
 }
 
-// Extension pour ProductModel
+// Extension séparée
 extension ProductModelExtension on ProductModel {
-  static ProductModel fromEntity(entity.Product entity) {
+  static ProductModel fromEntity(entity.Product e) {
     return ProductModel(
-      id: entity.id,
-      code: entity.code,
-      designation: entity.designation,
-      barcode: entity.barcode,
-      category: entity.category,
-      unit: entity.unit,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
+      id: e.id,
+      code: e.code,
+      designation: e.designation,
+      barcode: e.barcode,
+      category: e.category,
+      unit: e.unit,
+      createdAt: e.createdAt,
+      updatedAt: e.updatedAt,
     );
   }
 }

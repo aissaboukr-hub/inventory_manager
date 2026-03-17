@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:inventory_manager/core/utils/barcode_scanner.dart';
-import 'package:inventory_manager/core/utils/sound_player.dart';
 import 'package:inventory_manager/domain/entities/product.dart';
 import 'package:inventory_manager/domain/repositories/inventory_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -47,6 +46,8 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     _searchController.dispose();
     super.dispose();
   }
+
+  // ============ BUILD METHODS ============
 
   @override
   Widget build(BuildContext context) {
@@ -113,10 +114,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                   width: 250,
                   height: 150,
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 2,
-                    ),
+                    border: Border.all(color: Colors.white, width: 2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -159,7 +157,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Search field
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
@@ -182,7 +179,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
           
           const SizedBox(height: 16),
           
-          // Product info or new product form
           Expanded(
             child: _isNewProduct 
                 ? _buildNewProductForm() 
@@ -191,7 +187,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
           
           const SizedBox(height: 16),
           
-          // Quantity input
           Row(
             children: [
               IconButton(
@@ -222,7 +217,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
           
           const SizedBox(height: 16),
           
-          // Action buttons
           Row(
             children: [
               if (_isNewProduct) ...[
@@ -268,11 +262,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.qr_code_scanner,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.qr_code_scanner, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'Scannez un code-barres\nou recherchez un produit',
@@ -310,22 +300,14 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             const SizedBox(height: 12),
             Text(
               _scannedProduct!.designation,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             if (_scannedProduct!.category != null) ...[
               const SizedBox(height: 8),
-              Text(
-                'Catégorie: ${_scannedProduct!.category}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+              Text('Catégorie: ${_scannedProduct!.category}'),
             ],
             const SizedBox(height: 8),
-            Text(
-              'Unité: ${_scannedProduct!.unit}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            Text('Unité: ${_scannedProduct!.unit}', style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
       ),
@@ -348,19 +330,12 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                   const SizedBox(width: 8),
                   Text(
                     'Nouveau produit détecté',
-                    style: TextStyle(
-                      color: Colors.orange.shade800,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              Text(
-                'Code-barres: $_lastBarcode',
-                style: const TextStyle(fontFamily: 'monospace'),
-              ),
+              Text('Code-barres: $_lastBarcode', style: const TextStyle(fontFamily: 'monospace')),
               const SizedBox(height: 16),
               TextField(
                 decoration: InputDecoration(
@@ -392,6 +367,8 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     );
   }
 
+  // ============ ACTION METHODS ============
+
   void _onBarcodeDetected(BarcodeCapture capture) async {
     if (_isProcessing) return;
     
@@ -403,8 +380,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
         _lastBarcode = barcode;
         
         try {
-          final product = await context.read<InventoryRepository>()
-              .getProductByBarcode(barcode);
+          final product = await context.read<InventoryRepository>().getProductByBarcode(barcode);
           
           setState(() {
             if (product != null) {
@@ -434,8 +410,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      final products = await context.read<InventoryRepository>()
-          .searchProducts(query, limit: 10);
+      final products = await context.read<InventoryRepository>().searchProducts(query, limit: 10);
       
       if (products.isEmpty) {
         setState(() {
@@ -449,7 +424,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
           _isNewProduct = false;
         });
       } else {
-        // Show selection dialog
         if (!mounted) return;
         final selected = await showDialog<Product>(
           context: context,
@@ -502,12 +476,56 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
       return;
     }
 
-    try {
-      if (_isNewProduct) {
-        // TODO: Create new product first
-        _showError('Veuillez créer le produit d\'abord');
-        return;
-      }
+    if (_isNewProduct) {
+      _showError('Veuillez créer le produit d\'abord');
+      return;
+    }
 
-      if (_scannedProduct != null) {
-        await
+    if (_scannedProduct == null) {
+      _showError('Aucun produit sélectionné');
+      return;
+    }
+
+    try {
+      await context.read<InventoryRepository>().addInventoryItem(
+        inventoryId: widget.inventoryId,
+        productId: _scannedProduct!.id!,
+        quantity: quantity,
+      );
+
+      setState(() {
+        _scannedProduct = null;
+        _isNewProduct = false;
+        _lastBarcode = null;
+        _quantityController.text = '1';
+      });
+
+      _showSuccess('Article ajouté: ${quantity > 0 ? '+' : ''}$quantity');
+    } catch (e) {
+      _showError('Erreur lors de l\'ajout: $e');
+    }
+  }
+
+  void _toggleTorch() {
+    setState(() {
+      _torchEnabled = !_torchEnabled;
+      _cameraController?.toggleTorch();
+    });
+  }
+
+  // ============ HELPER METHODS ============
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 3)),
+    );
+  }
+
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green, duration: const Duration(seconds: 2)),
+    );
+  }
+}
