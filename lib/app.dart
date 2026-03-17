@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';  // ← AJOUTER CECI
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:inventory_manager/config/routes.dart';
 import 'package:inventory_manager/config/theme.dart';
 import 'package:inventory_manager/data/datasources/local/database.dart';
 import 'package:inventory_manager/data/repositories/inventory_repository_impl.dart';
 import 'package:inventory_manager/domain/repositories/inventory_repository.dart';
-import 'package:inventory_manager/features/home/presentation/bloc/home_bloc';
+import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';  // ← Vérifier ce chemin
 
 class InventoryApp extends StatelessWidget {
   const InventoryApp({super.key});
@@ -23,10 +23,11 @@ class InventoryApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider(
+          // ← CORRIGÉ: Type explicite ajouté
+          BlocProvider<HomeBloc>(
             create: (context) => HomeBloc(
               repository: context.read<InventoryRepository>(),
-            )..add(LoadInventoriesEvent()),
+            )..add(const LoadInventoriesEvent()),  // ← const ajouté
           ),
         ],
         child: MaterialApp(
@@ -37,7 +38,7 @@ class InventoryApp extends StatelessWidget {
           themeMode: ThemeMode.system,
           initialRoute: AppRoutes.home,
           routes: AppRoutes.routes,
-          localizationsDelegates: const [  // ← CORRIGÉ: const ajouté
+          localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
