@@ -1,0 +1,78 @@
+# Configuration Codemagic pour Inventory Manager
+workflows:
+  flutter-app-workflow:
+    name: Inventory Manager CI/CD
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - keystore_credentials # Créez ce groupe dans l'UI Codemagic pour Android
+        - apple_auth          # Créez ce groupe pour l'App Store Connect
+      vars:
+        PACKAGE_NAME: "com.votre.nom.inventory_manager"
+    
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+
+    scripts:
+      - name: Setup Flutter & Dependencies
+        script: |
+          flutter channel stable
+          flutter upgrade
+          flutter pub get
+
+      - name: Code Generation (Build Runner)
+        script: |
+          # Nécessaire pour Floor, Drift, Freezed ou JSON Serializable
+          flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Static Analysis and Linting
+        script: |
+          flutter analyze
+          # En option : flutter test (si vous avez des tests écrits)
+
+      - name: Build Android (Release)
+        script: |
+          # Build l'App Bundle (.aab) pour le Play Store
+          # La signature utilise les variables d'environnement configurées dans l'UI
+          flutter build appbundle --release \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER
+
+      - name: Build iOS (Release)
+        script: |
+          # Initialise le trousseau de clés pour la signature iOS
+          keychain initialize
+          # Récupère les profils de provisionnement depuis Apple
+          app-store-connect fetch-signing-files "$PACKAGE_NAME" --project-id "$APPLE_APP_ID" --install
+          keychain add-certificates
+          
+          # Build de l'IPA
+          flutter build ios --release --export-options-plist=$HOME/export_options.plist
+
+    artifacts:
+      - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/flutter-apk/*.apk
+      - build/ios/iphoneos/*.ipa
+      - build/ios/iphoneos/*.app
+      - '*.log'
+
+    publishing:
+      email:
+        recipients:
+          - votre-email@exemple.com
+        notified:
+          on_success: true
+          on_failure: true
+      # Optionnel : Envoi automatique sur TestFlight / Google Play Beta
+      # google_play:
+      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: internal
