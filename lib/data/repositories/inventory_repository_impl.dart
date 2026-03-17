@@ -1,22 +1,26 @@
 import 'package:inventory_manager/core/errors/failures.dart';
-import 'package:inventory_manager/data/datasources/local/dao/inventory_dao.dart';
+import 'package:inventory_manager/data/datasources/local/dao/inventory_dao.dart' as dao;
 import 'package:inventory_manager/data/datasources/local/dao/product_dao.dart';
-import 'package:inventory_manager/data/datasources/local/database.dart';
-import 'package:inventory_manager/data/models/inventory_model.dart';
+import 'package:inventory_manager/data/datasources/local/database.dart' as db;
 import 'package:inventory_manager/data/models/inventory_item_model.dart';
+import 'package:inventory_manager/data/models/inventory_model.dart';
 import 'package:inventory_manager/data/models/product_model.dart';
 import 'package:inventory_manager/domain/entities/inventory.dart';
 import 'package:inventory_manager/domain/entities/inventory_item.dart';
 import 'package:inventory_manager/domain/entities/product.dart';
-import 'package:inventory_manager/domain/repositories/inventory_repository.dart';
+import 'package:inventory_manager/domain/repositories/inventory_repository.dart' as repo;
 
-class InventoryRepositoryImpl implements InventoryRepository {
-  final AppDatabase _database;
-  late final InventoryDao _inventoryDao;
+// Renommer les classes en conflit
+typedef DomainInventorySummary = repo.InventorySummary;
+typedef DomainInventoryStats = repo.InventoryStats;
+
+class InventoryRepositoryImpl implements repo.InventoryRepository {
+  final db.AppDatabase _database;
+  late final dao.InventoryDao _inventoryDao;
   late final ProductDao _productDao;
 
   InventoryRepositoryImpl(this._database) {
-    _inventoryDao = InventoryDao(_database);
+    _inventoryDao = dao.InventoryDao(_database);
     _productDao = ProductDao(_database);
   }
 
@@ -27,7 +31,6 @@ class InventoryRepositoryImpl implements InventoryRepository {
     try {
       final inventories = await _inventoryDao.getAllInventories();
       
-      // Get stats for each inventory
       final List<Inventory> result = [];
       for (final inv in inventories) {
         final stats = await _inventoryDao.getInventoryStats(inv.id);
@@ -165,7 +168,6 @@ class InventoryRepositoryImpl implements InventoryRepository {
     String unit = 'U',
   }) async {
     try {
-      // Validation
       if (code.isEmpty) {
         throw ValidationFailure(message: 'Product code is required');
       }
@@ -173,7 +175,6 @@ class InventoryRepositoryImpl implements InventoryRepository {
         throw ValidationFailure(message: 'Product designation is required');
       }
       
-      // Check for duplicates
       final existingCode = await _productDao.codeExists(code);
       if (existingCode) {
         throw ValidationFailure(message: 'Product code already exists');
@@ -210,7 +211,6 @@ class InventoryRepositoryImpl implements InventoryRepository {
         throw ValidationFailure(message: 'Product ID is required');
       }
       
-      // Check for duplicates excluding current product
       final existingCode = await _productDao.codeExists(
         product.code,
         excludeId: product.id,
@@ -229,8 +229,18 @@ class InventoryRepositoryImpl implements InventoryRepository {
         }
       }
       
-      final driftProduct = ProductModel.fromEntity(product).toDrift();
-      final success = await _productDao.updateProduct(driftProduct);
+      final success = await _productDao.updateProduct(
+        db.Product(
+          id: product.id!,
+          code: product.code,
+          designation: product.designation,
+          barcode: product.barcode,
+          category: product.category,
+          unit: product.unit,
+          createdAt: product.createdAt ?? DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
       
       if (!success) {
         throw NotFoundFailure(message: 'Product not found');
@@ -262,8 +272,13 @@ class InventoryRepositoryImpl implements InventoryRepository {
   Future<void> batchInsertProducts(List<Product> products) async {
     try {
       final companions = products.map((p) {
-        final model = ProductModel.fromEntity(p);
-        return model.toCompanion();
+        return db.ProductsCompanion(
+          code: db.Value(p.code),
+          designation: db.Value(p.designation),
+          barcode: db.Value(p.barcode),
+          category: db.Value(p.category),
+          unit: db.Value(p.unit),
+        );
       }).toList();
       
       await _productDao.batchInsert(companions);
@@ -288,8 +303,9 @@ class InventoryRepositoryImpl implements InventoryRepository {
       );
       
       return items.map((item) {
-        final model = InventoryItemModel.fromDriftWithProduct(item);
-        return model.copyWith(inventoryId: inventoryId).toEntity();
+        return InventoryItemModel.fromDriftWithProduct(item)
+            .copyWith(inventoryId: inventoryId)
+            .toEntity();
       }).toList();
     } catch (e) {
       throw DatabaseFailure(message: 'Failed to load inventory items: $e');
@@ -317,7 +333,6 @@ class InventoryRepositoryImpl implements InventoryRepository {
         scannedBy: scannedBy,
       );
       
-      // Fetch the created item with product
       final items = await _inventoryDao.getItemsByInventory(inventoryId, limit: 1);
       final item = items.firstWhere((i) => i.itemId == id);
       
@@ -373,11 +388,11 @@ class InventoryRepositoryImpl implements InventoryRepository {
   // ============== AGGREGATION ==============
 
   @override
-  Future<List<InventorySummary>> getInventorySummary(int inventoryId) async {
+  Future<List<DomainInventorySummary>> getInventorySummary(int inventoryId) async {
     try {
       final summary = await _inventoryDao.getInventorySummary(inventoryId);
       
-      return summary.map((row) => InventorySummary(
+      return summary.map((row) => DomainInventorySummary(
         productId: row.productId,
         code: row.code,
         designation: row.designation,
@@ -393,10 +408,10 @@ class InventoryRepositoryImpl implements InventoryRepository {
   }
 
   @override
-  Future<InventoryStats> getInventoryStats(int inventoryId) async {
+  Future<DomainInventoryStats> getInventoryStats(int inventoryId) async {
     try {
       final stats = await _inventoryDao.getInventoryStats(inventoryId);
-      return InventoryStats(
+      return DomainInventoryStats(
         productCount: stats.productCount,
         totalItems: stats.totalItems,
       );

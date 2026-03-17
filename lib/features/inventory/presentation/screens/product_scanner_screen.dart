@@ -374,34 +374,41 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     
     setState(() => _isProcessing = true);
 
-    _scannerService.handleBarcode(
-      capture,
-      onBarcodeDetected: (barcode) async {
-        _lastBarcode = barcode;
-        
-        try {
-          final product = await context.read<InventoryRepository>().getProductByBarcode(barcode);
-          
-          setState(() {
-            if (product != null) {
-              _scannedProduct = product;
-              _isNewProduct = false;
-            } else {
-              _isNewProduct = true;
-              _scannedProduct = null;
-            }
-            _isProcessing = false;
-          });
-        } catch (e) {
-          setState(() => _isProcessing = false);
-          _showError('Erreur lors de la recherche: $e');
+    final List<Barcode> barcodes = capture.barcodes;
+    if (barcodes.isEmpty) {
+      setState(() => _isProcessing = false);
+      return;
+    }
+
+    final String? code = barcodes.first.rawValue;
+    if (code == null || code.isEmpty) {
+      setState(() => _isProcessing = false);
+      return;
+    }
+
+    try {
+      // Jouer le son de confirmation
+      final soundPlayer = SoundPlayer();
+      await soundPlayer.playBeep();
+
+      _lastBarcode = code;
+      
+      final product = await context.read<InventoryRepository>().getProductByBarcode(code);
+      
+      setState(() {
+        if (product != null) {
+          _scannedProduct = product;
+          _isNewProduct = false;
+        } else {
+          _isNewProduct = true;
+          _scannedProduct = null;
         }
-      },
-      onError: (error) {
-        setState(() => _isProcessing = false);
-        _showError(error);
-      },
-    );
+        _isProcessing = false;
+      });
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      _showError('Erreur lors de la recherche: $e');
+    }
   }
 
   void _searchProduct(String query) async {
