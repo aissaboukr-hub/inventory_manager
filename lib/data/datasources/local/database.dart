@@ -221,6 +221,7 @@ class AppDatabase extends _$AppDatabase {
         i.quantity,
         i.timestamp,
         i.notes,
+        i.scanned_by,  // ← AJOUTER
         p.id as product_id,
         p.code as product_code,
         p.designation as product_designation,
@@ -244,6 +245,7 @@ class AppDatabase extends _$AppDatabase {
       quantity: row.read<double>('quantity'),
       timestamp: row.read<DateTime>('timestamp'),
       notes: row.read<String?>('notes'),
+      scannedBy: row.read<String?>('scanned_by'),  // ← AJOUTER
       productId: row.read<int>('product_id'),
       productCode: row.read<String>('product_code'),
       productDesignation: row.read<String>('product_designation'),
@@ -389,22 +391,26 @@ class InventoryItemWithProduct {
   final double quantity;
   final DateTime timestamp;
   final String? notes;
+  final String? scannedBy;  // ← AJOUTER
   final int productId;
   final String productCode;
   final String productDesignation;
   final String? productBarcode;
   final String productUnit;
+  final String? productCategory;
 
   InventoryItemWithProduct({
     required this.itemId,
     required this.quantity,
     required this.timestamp,
     this.notes,
+    this.scannedBy,  // ← AJOUTER
     required this.productId,
     required this.productCode,
     required this.productDesignation,
     this.productBarcode,
     required this.productUnit,
+    this.productCategory,
   });
 }
 

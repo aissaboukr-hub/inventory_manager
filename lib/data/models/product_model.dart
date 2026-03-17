@@ -1,6 +1,6 @@
-import 'package:drift/drift.dart';  // ← AJOUTER CETTE LIGNE
-import 'package:inventory_manager/data/datasources/local/database.dart';
-import 'package:inventory_manager/domain/entities/product.dart';
+import 'package:drift/drift.dart';
+import 'package:inventory_manager/data/datasources/local/database.dart' as db;
+import 'package:inventory_manager/domain/entities/product.dart' as entity;
 
 class ProductModel {
   final int? id;
@@ -23,8 +23,8 @@ class ProductModel {
     this.updatedAt,
   });
 
-  // From Drift entity
-  factory ProductModel.fromDrift(Product drift) {
+  // From Drift entity (db.Product)
+  factory ProductModel.fromDrift(db.Product drift) {
     return ProductModel(
       id: drift.id,
       code: drift.code,
@@ -37,8 +37,22 @@ class ProductModel {
     );
   }
 
+  // To Drift entity (db.Product)
+  db.Product toDrift() {
+    return db.Product(
+      id: id ?? 0,
+      code: code,
+      designation: designation,
+      barcode: barcode,
+      category: category,
+      unit: unit,
+      createdAt: createdAt ?? DateTime.now(),
+      updatedAt: updatedAt ?? DateTime.now(),
+    );
+  }
+
   // From domain entity
-  factory ProductModel.fromEntity(Product entity) {
+  factory ProductModel.fromEntity(entity.Product entity) {
     return ProductModel(
       id: entity.id,
       code: entity.code,
@@ -52,8 +66,8 @@ class ProductModel {
   }
 
   // To domain entity
-  Product toEntity() {
-    return Product(
+  entity.Product toEntity() {
+    return entity.Product(
       id: id,
       code: code,
       designation: designation,
@@ -66,8 +80,8 @@ class ProductModel {
   }
 
   // To Drift companion
-  ProductsCompanion toCompanion() {
-    return ProductsCompanion(
+  db.ProductsCompanion toCompanion() {
+    return db.ProductsCompanion(
       id: id != null ? Value(id!) : const Value.absent(),
       code: Value(code),
       designation: Value(designation),
@@ -127,7 +141,6 @@ class ProductModel {
     );
   }
 
-  // Validation
   bool get isValid {
     return code.isNotEmpty && 
            code.length <= 50 &&

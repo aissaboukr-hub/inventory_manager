@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
-import 'package:inventory_manager/data/datasources/local/database.dart';
-import 'package:inventory_manager/domain/entities/inventory_item.dart';
-import 'package:inventory_manager/domain/entities/product.dart';
+import 'package:inventory_manager/data/datasources/local/database.dart' as db;
+import 'package:inventory_manager/data/models/product_model.dart';
+import 'package:inventory_manager/domain/entities/inventory_item.dart' as entity;
 
 class InventoryItemModel {
   final int? id;
@@ -26,7 +26,7 @@ class InventoryItemModel {
 
   // From Drift with product join
   factory InventoryItemModel.fromDriftWithProduct(
-    InventoryItemWithProduct drift,
+    db.InventoryItemWithProduct drift,
   ) {
     return InventoryItemModel(
       id: drift.itemId,
@@ -35,7 +35,7 @@ class InventoryItemModel {
       quantity: drift.quantity,
       timestamp: drift.timestamp,
       notes: drift.notes,
-      scannedBy: drift.scannedBy,
+      scannedBy: null, // Not in drift, add if needed in database.dart
       product: ProductModel(
         id: drift.productId,
         code: drift.productCode,
@@ -48,7 +48,7 @@ class InventoryItemModel {
   }
 
   // From domain entity
-  factory InventoryItemModel.fromEntity(InventoryItem entity) {
+  factory InventoryItemModel.fromEntity(entity.InventoryItem entity) {
     return InventoryItemModel(
       id: entity.id,
       inventoryId: entity.inventoryId,
@@ -62,8 +62,8 @@ class InventoryItemModel {
   }
 
   // To domain entity
-  InventoryItem toEntity() {
-    return InventoryItem(
+  entity.InventoryItem toEntity() {
+    return entity.InventoryItem(
       id: id,
       inventoryId: inventoryId,
       productId: productId,
@@ -76,8 +76,8 @@ class InventoryItemModel {
   }
 
   // To Drift companion
-  InventoryItemsCompanion toCompanion() {
-    return InventoryItemsCompanion(
+  db.InventoryItemsCompanion toCompanion() {
+    return db.InventoryItemsCompanion(
       id: id != null ? Value(id!) : const Value.absent(),
       inventoryId: Value(inventoryId),
       productId: Value(productId),
@@ -136,7 +136,6 @@ class InventoryItemModel {
     );
   }
 
-  // Helper methods
   bool get isPositive => quantity > 0;
   bool get isNegative => quantity < 0;
   bool get isCorrection => quantity < 0;
@@ -156,7 +155,7 @@ class InventoryItemModel {
 
 // Extension pour ProductModel
 extension ProductModelExtension on ProductModel {
-  static ProductModel fromEntity(Product entity) {
+  static ProductModel fromEntity(entity.Product entity) {
     return ProductModel(
       id: entity.id,
       code: entity.code,

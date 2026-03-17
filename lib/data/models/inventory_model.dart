@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:inventory_manager/data/datasources/local/database.dart';
-import 'package:inventory_manager/domain/entities/inventory.dart';
+import 'package:inventory_manager/data/datasources/local/database.dart' as db;
+import 'package:inventory_manager/domain/entities/inventory.dart' as entity;
 
 class InventoryModel {
   final int id;
@@ -22,20 +22,7 @@ class InventoryModel {
   });
 
   // From Drift entity
-  factory InventoryModel.fromEntity(Inventory entity) {
-    return InventoryModel(
-      id: entity.id,
-      name: entity.name,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-      isActive: entity.isActive,
-      description: entity.description,
-      itemCount: entity.itemCount,
-    );
-  }
-
-  // From database row
-  factory InventoryModel.fromDrift(Inventory drift) {
+  factory InventoryModel.fromDrift(db.Inventory drift) {
     return InventoryModel(
       id: drift.id,
       name: drift.name,
@@ -46,9 +33,21 @@ class InventoryModel {
     );
   }
 
+  // To Drift entity
+  db.Inventory toDrift() {
+    return db.Inventory(
+      id: id,
+      name: name,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      isActive: isActive,
+      description: description,
+    );
+  }
+
   // To domain entity
-  Inventory toEntity() {
-    return Inventory(
+  entity.Inventory toEntity() {
+    return entity.Inventory(
       id: id,
       name: name,
       createdAt: createdAt,
@@ -60,8 +59,8 @@ class InventoryModel {
   }
 
   // To Drift companion
-  InventoriesCompanion toCompanion() {
-    return InventoriesCompanion(
+  db.InventoriesCompanion toCompanion() {
+    return db.InventoriesCompanion(
       id: Value(id),
       name: Value(name),
       createdAt: Value(createdAt),
