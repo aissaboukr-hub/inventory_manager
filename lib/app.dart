@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';  // ← AJOUTER CECI
 import 'package:inventory_manager/config/routes.dart';
 import 'package:inventory_manager/config/theme.dart';
 import 'package:inventory_manager/data/datasources/local/database.dart';
 import 'package:inventory_manager/data/repositories/inventory_repository_impl.dart';
 import 'package:inventory_manager/domain/repositories/inventory_repository.dart';
-import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';
+import 'package:inventory_manager/features/home/presentation/bloc/home_bloc';
 
 class InventoryApp extends StatelessWidget {
   const InventoryApp({super.key});
@@ -36,8 +37,10 @@ class InventoryApp extends StatelessWidget {
           themeMode: ThemeMode.system,
           initialRoute: AppRoutes.home,
           routes: AppRoutes.routes,
-          localizationsDelegates: const [
-            ...GlobalMaterialLocalizations.delegates,
+          localizationsDelegates: const [  // ← CORRIGÉ: const ajouté
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: const [
             Locale('fr', 'FR'),

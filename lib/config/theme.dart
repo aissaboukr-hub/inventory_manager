@@ -43,7 +43,8 @@ class AppTheme {
         scrolledUnderElevation: 1,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
-      cardTheme: CardTheme(
+      // ← CORRIGÉ: CardThemeData au lieu de CardTheme
+      cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -137,6 +138,13 @@ class AppTheme {
         onInverseSurface: Color(0xFF313033),
         inversePrimary: Color(0xFF6750A4),
         surfaceTint: Color(0xFFD0BCFF),
+      ),
+      // ← CORRIGÉ: CardThemeData au lieu de CardTheme
+      cardTheme: CardThemeData(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
     );
   }
