@@ -3,6 +3,7 @@ workflows:
     name: Inventory Manager CI/CD
     instance_type: mac_mini_m1
     max_build_duration: 60
+
     environment:
       flutter: stable
       xcode: latest
@@ -10,7 +11,7 @@ workflows:
       groups:
         - keystore_credentials
         - apple_auth
-    
+
     triggering:
       events:
         - push
@@ -26,16 +27,18 @@ workflows:
 
       - name: Code Generation (Build Runner)
         script: |
-          # Commande critique pour Clean Architecture (Models/DAO)
           flutter pub run build_runner build --delete-conflicting-outputs
 
-      - name: Build Android (Release)
+      - name: Build Android App Bundle (Release)
         script: |
           flutter build appbundle --release --build-name=1.0.0 --build-number=$BUILD_NUMBER
 
+      - name: Build Android APK (Release)
+        script: |
+          flutter build apk --release --build-name=1.0.0 --build-number=$BUILD_NUMBER
+
       - name: Build iOS (Release)
         script: |
-          # Si vous n'avez pas encore de certificats, utilisez --no-codesign pour tester le build
           flutter build ios --release --no-codesign
 
     artifacts:
