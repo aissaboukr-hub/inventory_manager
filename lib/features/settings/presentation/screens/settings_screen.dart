@@ -44,7 +44,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: ListView(
         children: [
-          // Section Import/Export
           _buildSectionHeader('Import / Export'),
           _buildListTile(
             icon: Icons.file_upload_outlined,
@@ -61,7 +60,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           
           const Divider(),
           
-          // Section Données
           _buildSectionHeader('Données'),
           _buildListTile(
             icon: Icons.backup_outlined,
@@ -85,7 +83,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           
           const Divider(),
           
-          // Section Statistiques
           _buildSectionHeader('Statistiques'),
           _buildStatTile(
             icon: Icons.inventory_2_outlined,
@@ -100,7 +97,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           
           const Divider(),
           
-          // Section À propos
           _buildSectionHeader('À propos'),
           _buildListTile(
             icon: Icons.info_outlined,
@@ -168,8 +164,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ============ ACTIONS ============
-
   Future<void> _importFromExcel() async {
     setState(() => _isLoading = true);
     
@@ -227,7 +221,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             SizedBox(height: 16),
             Text(
-              'Pour configurer Google Sheets, vous devez déployer un Google Apps Script. Consultez la documentation pour plus d\'informations.',
+              'Pour configurer Google Sheets, vous devez déployer un Google Apps Script.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
@@ -238,10 +232,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            onPressed: () {
-              // TODO: Save configuration
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text('Enregistrer'),
           ),
         ],
@@ -255,8 +246,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final database = AppDatabase();
       final exportService = ExportService(database);
-      
-      // Export all inventories
       final inventories = await database.select(database.inventories).get();
       
       for (final inventory in inventories) {
@@ -301,10 +290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implement restore
-            },
+            onPressed: () => Navigator.pop(context),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Restaurer'),
           ),
@@ -327,11 +313,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(context);
-              // TODO: Implement cleanup
-              final database = AppDatabase();
-              // await database.cleanupOrphanedProducts();
               _loadStats();
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.orange),
