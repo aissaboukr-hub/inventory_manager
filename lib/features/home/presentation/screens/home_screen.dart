@@ -19,7 +19,7 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () {
-              // TODO: Navigate to settings
+              Navigator.pushNamed(context, AppRoutes.settings);
             },
           ),
         ],

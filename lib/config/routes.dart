@@ -3,6 +3,7 @@ import 'package:inventory_manager/features/home/presentation/screens/home_screen
 import 'package:inventory_manager/features/inventory/presentation/screens/inventory_list_screen.dart';
 import 'package:inventory_manager/features/inventory/presentation/screens/product_scanner_screen.dart';
 import 'package:inventory_manager/features/product_management/presentation/screens/add_product_screen.dart';
+import 'package:inventory_manager/features/settings/presentation/screens/settings_screen.dart';  // ← AJOUTER
 import 'package:inventory_manager/domain/entities/inventory.dart';
 
 class AppRoutes {
@@ -11,11 +12,12 @@ class AppRoutes {
   static const String scanner = '/scanner';
   static const String addProduct = '/add-product';
   static const String importExport = '/import-export';
-  static const String settings = '/settings';
+  static const String settings = '/settings';  // ← AJOUTER
 
   static Map<String, WidgetBuilder> get routes {
     return {
       home: (context) => const HomeScreen(),
+      settings: (context) => const SettingsScreen(),  // ← AJOUTER
     };
   }
 
