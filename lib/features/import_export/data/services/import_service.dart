@@ -1,9 +1,8 @@
 import 'dart:io';
-import 'package:drift/drift.dart' as drift;  // ← AJOUTER CECI
+import 'package:drift/drift.dart' as drift;
 import 'package:file_picker/file_picker.dart';
-import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xlsio;
+import 'package:excel/excel.dart';  // ← Utiliser excel package
 import 'package:inventory_manager/data/datasources/local/database.dart';
-import 'package:inventory_manager/domain/entities/product.dart';
 
 class ImportService {
   final AppDatabase _database;
@@ -24,32 +23,42 @@ class ImportService {
     final file = File(result.files.single.path!);
     final bytes = await file.readAsBytes();
 
-    final workbook = xlsio.Workbook.openStream(bytes);
-    final worksheet = workbook.worksheets[0];
+    // ← CORRIGÉ: Utiliser excel package
+    final excel = Excel.decodeBytes(bytes);
+    final sheet = excel.tables[excel.tables.keys.first];
+
+    if (sheet == null) {
+      return ImportResult(
+        successCount: 0,
+        errorCount: 1,
+        errors: ['Feuille de calcul vide'],
+      );
+    }
 
     final products = <ProductsCompanion>[];
     final errors = <String>[];
 
-    // Start from row 2 (skip header)
-    for (var i = 2; i <= worksheet.rows.count; i++) {
+    // Start from row 1 (skip header, row 0)
+    for (var i = 1; i < sheet.maxRows; i++) {
       try {
-        final row = worksheet.rows[i - 1]; // 0-based index
+        final row = sheet.row(i);
         
-        final code = row[0]?.text?.trim();
-        final designation = row[1]?.text?.trim();
-        final barcode = row[2]?.text?.trim();
+        if (row.isEmpty) continue;
+
+        final code = row[0]?.value?.toString().trim();
+        final designation = row[1]?.value?.toString().trim();
+        final barcode = row.length > 2 ? row[2]?.value?.toString().trim() : null;
 
         if (code == null || code.isEmpty) {
-          errors.add('Ligne $i: Code manquant');
+          errors.add('Ligne ${i + 1}: Code manquant');
           continue;
         }
 
         if (designation == null || designation.isEmpty) {
-          errors.add('Ligne $i: Désignation manquante pour $code');
+          errors.add('Ligne ${i + 1}: Désignation manquante pour $code');
           continue;
         }
 
-        // ← CORRIGÉ: Utiliser directement ProductsCompanion
         products.add(ProductsCompanion(
           code: drift.Value(code),
           designation: drift.Value(designation),
@@ -58,11 +67,9 @@ class ImportService {
           unit: const drift.Value('U'),
         ));
       } catch (e) {
-        errors.add('Ligne $i: Erreur - $e');
+        errors.add('Ligne ${i + 1}: Erreur - $e');
       }
     }
-
-    workbook.dispose();
 
     if (products.isNotEmpty) {
       await _database.batchInsertProducts(products);
@@ -76,7 +83,6 @@ class ImportService {
   }
 
   Future<ImportResult> importFromGoogleSheets(String sheetId) async {
-    // TODO: Implement Google Sheets import
     throw UnimplementedError();
   }
 }
