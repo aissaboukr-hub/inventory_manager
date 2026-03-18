@@ -1,7 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:drift/drift.dart' as drift;
 import 'package:file_picker/file_picker.dart';
-import 'package:excel/excel.dart';  // ← Utiliser excel package
+import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xlsio;
 import 'package:inventory_manager/data/datasources/local/database.dart';
 
 class ImportService {
@@ -23,39 +24,35 @@ class ImportService {
     final file = File(result.files.single.path!);
     final bytes = await file.readAsBytes();
 
-    // ← CORRIGÉ: Utiliser excel package
-    final excel = Excel.decodeBytes(bytes);
-    final sheet = excel.tables[excel.tables.keys.first];
+    // ← CORRIGÉ: Utiliser BytesBuilder pour convertir en Uint8List si nécessaire
+    final uint8List = Uint8List.fromList(bytes);
 
-    if (sheet == null) {
-      return ImportResult(
-        successCount: 0,
-        errorCount: 1,
-        errors: ['Feuille de calcul vide'],
-      );
-    }
+    // ← CORRIGÉ: Créer un nouveau workbook et charger depuis les bytes
+    final workbook = xlsio.Workbook();
+    // Pour les versions récentes de syncfusion
+    final stream = Stream.fromIterable([uint8List]);
+    await workbook.openStream(stream);
 
+    final worksheet = workbook.worksheets[0];
     final products = <ProductsCompanion>[];
     final errors = <String>[];
 
-    // Start from row 1 (skip header, row 0)
-    for (var i = 1; i < sheet.maxRows; i++) {
+    // Start from row 2 (skip header)
+    for (var i = 2; i <= worksheet.rows.count; i++) {
       try {
-        final row = sheet.row(i);
+        final row = worksheet.rows[i - 1];
         
-        if (row.isEmpty) continue;
-
-        final code = row[0]?.value?.toString().trim();
-        final designation = row[1]?.value?.toString().trim();
-        final barcode = row.length > 2 ? row[2]?.value?.toString().trim() : null;
+        final code = row[0]?.text?.trim();
+        final designation = row[1]?.text?.trim();
+        final barcode = row[2]?.text?.trim();
 
         if (code == null || code.isEmpty) {
-          errors.add('Ligne ${i + 1}: Code manquant');
+          errors.add('Ligne $i: Code manquant');
           continue;
         }
 
         if (designation == null || designation.isEmpty) {
-          errors.add('Ligne ${i + 1}: Désignation manquante pour $code');
+          errors.add('Ligne $i: Désignation manquante pour $code');
           continue;
         }
 
@@ -67,9 +64,11 @@ class ImportService {
           unit: const drift.Value('U'),
         ));
       } catch (e) {
-        errors.add('Ligne ${i + 1}: Erreur - $e');
+        errors.add('Ligne $i: Erreur - $e');
       }
     }
+
+    workbook.dispose();
 
     if (products.isNotEmpty) {
       await _database.batchInsertProducts(products);
