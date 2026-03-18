@@ -1,8 +1,6 @@
-// ← IMPORTANT: Doit être exactement comme ceci
 part of 'home_bloc.dart';
 
-import 'package:equatable/equatable.dart';
-import 'package:inventory_manager/domain/entities/inventory.dart';
+// ← PAS D'IMPORTS ICI - tout vient du home_bloc.dart
 
 abstract class HomeState extends Equatable {
   const HomeState();
