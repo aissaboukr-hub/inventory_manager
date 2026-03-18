@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' as drift;  // ← AJOUTER CECI
+import 'package:drift/drift.dart' as drift;
 import 'package:inventory_manager/core/errors/failures.dart';
 import 'package:inventory_manager/data/datasources/local/dao/inventory_dao.dart' as dao;
 import 'package:inventory_manager/data/datasources/local/dao/product_dao.dart';
@@ -274,11 +274,11 @@ class InventoryRepositoryImpl implements repo.InventoryRepository {
     try {
       final companions = products.map((p) {
         return db.ProductsCompanion(
-          code: drift.Value(p.code),           // ← CORRIGÉ: drift.Value
-          designation: drift.Value(p.designation), // ← CORRIGÉ: drift.Value
-          barcode: drift.Value(p.barcode),     // ← CORRIGÉ: drift.Value
-          category: drift.Value(p.category),   // ← CORRIGÉ: drift.Value
-          unit: drift.Value(p.unit),           // ← CORRIGÉ: drift.Value
+          code: drift.Value(p.code),
+          designation: drift.Value(p.designation),
+          barcode: drift.Value(p.barcode),
+          category: drift.Value(p.category),
+          unit: drift.Value(p.unit),
         );
       }).toList();
       
@@ -304,9 +304,7 @@ class InventoryRepositoryImpl implements repo.InventoryRepository {
       );
       
       return items.map((item) {
-        // ← CORRIGÉ: Conversion explicite du type
-        final convertedItem = _convertInventoryItemWithProduct(item);
-        return InventoryItemModel.fromDriftWithProduct(convertedItem)
+        return InventoryItemModel.fromDao(item)
             .copyWith(inventoryId: inventoryId)
             .toEntity();
       }).toList();
@@ -339,9 +337,7 @@ class InventoryRepositoryImpl implements repo.InventoryRepository {
       final items = await _inventoryDao.getItemsByInventory(inventoryId, limit: 1);
       final item = items.firstWhere((i) => i.itemId == id);
       
-      // ← CORRIGÉ: Conversion explicite du type
-      final convertedItem = _convertInventoryItemWithProduct(item);
-      return InventoryItemModel.fromDriftWithProduct(convertedItem)
+      return InventoryItemModel.fromDao(item)
           .copyWith(inventoryId: inventoryId)
           .toEntity();
     } on ValidationFailure {
@@ -423,24 +419,5 @@ class InventoryRepositoryImpl implements repo.InventoryRepository {
     } catch (e) {
       throw DatabaseFailure(message: 'Failed to get inventory stats: $e');
     }
-  }
-
-  // ============== HELPER METHODS ==============
-
-  /// Convertit le type du DAO vers le type de la database
-  db.InventoryItemWithProduct _convertInventoryItemWithProduct(dao.InventoryItemWithProduct item) {
-    return db.InventoryItemWithProduct(
-      itemId: item.itemId,
-      quantity: item.quantity,
-      timestamp: item.timestamp,
-      notes: item.notes,
-      scannedBy: item.scannedBy,
-      productId: item.productId,
-      productCode: item.productCode,
-      productDesignation: item.productDesignation,
-      productBarcode: item.productBarcode,
-      productUnit: item.productUnit,
-      productCategory: item.productCategory,
-    );
   }
 }

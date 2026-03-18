@@ -174,7 +174,7 @@ class AppDatabase extends _$AppDatabase {
         batch.insert(
           products,
           product,
-          onConflict: DoUpdate((old) => ProductsCompanion.custom(
+          onConflict: DoUpdate((old) => ProductsCompanion(
             designation: product.designation,
             barcode: product.barcode,
             updatedAt: Value(DateTime.now()),

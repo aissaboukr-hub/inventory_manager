@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' as drift;
+import 'package:inventory_manager/data/datasources/local/dao/inventory_dao.dart' as dao;
 import 'package:inventory_manager/data/datasources/local/database.dart' as db;
 import 'package:inventory_manager/data/models/product_model.dart';
 import 'package:inventory_manager/domain/entities/inventory_item.dart' as entity;
@@ -25,10 +26,11 @@ class InventoryItemModel {
     this.product,
   });
 
+  // Pour db.InventoryItemWithProduct (sans préfixe product)
   factory InventoryItemModel.fromDriftWithProduct(db.InventoryItemWithProduct drift) {
     return InventoryItemModel(
-      id: drift.id,                    // ← CORRIGÉ: was itemId
-      inventoryId: drift.inventoryId,  // ← CORRIGÉ: was 0
+      id: drift.id,
+      inventoryId: drift.inventoryId,
       productId: drift.productId,
       quantity: drift.quantity,
       timestamp: drift.timestamp,
@@ -36,11 +38,32 @@ class InventoryItemModel {
       scannedBy: drift.scannedBy,
       product: ProductModel(
         id: drift.productId,
-        code: drift.code,              // ← CORRIGÉ: was productCode
-        designation: drift.designation, // ← CORRIGÉ: was productDesignation
-        barcode: drift.barcode,        // ← CORRIGÉ: was productBarcode
-        unit: drift.unit,              // ← CORRIGÉ: was productUnit
-        category: drift.category,      // ← CORRIGÉ: was productCategory
+        code: drift.code,
+        designation: drift.designation,
+        barcode: drift.barcode,
+        unit: drift.unit,
+        category: drift.category,
+      ),
+    );
+  }
+
+  // Pour dao.InventoryItemWithProduct (avec préfixe product)
+  factory InventoryItemModel.fromDao(dao.InventoryItemWithProduct drift) {
+    return InventoryItemModel(
+      id: drift.itemId,
+      inventoryId: 0,
+      productId: drift.productId,
+      quantity: drift.quantity,
+      timestamp: drift.timestamp,
+      notes: drift.notes,
+      scannedBy: drift.scannedBy,
+      product: ProductModel(
+        id: drift.productId,
+        code: drift.productCode,
+        designation: drift.productDesignation,
+        barcode: drift.productBarcode,
+        unit: drift.productUnit,
+        category: drift.productCategory,
       ),
     );
   }
