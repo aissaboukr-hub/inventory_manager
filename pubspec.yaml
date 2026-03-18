@@ -24,7 +24,7 @@ dependencies:
   # Scanner
   mobile_scanner: ^3.5.5
   
-  # Excel (pour import ET export) - REMPLACE syncfusion
+  # Excel (pour import ET export)
   excel: ^4.0.2
   
   # Utils
@@ -43,7 +43,9 @@ dependencies:
   # UI
   flutter_slidable: ^3.0.1
   shimmer: ^3.0.0
-  intl: ^0.18.1
+  
+  # ← CORRIGÉ: intl ^0.20.2 (au lieu de ^0.18.1)
+  intl: ^0.20.2
   
   # Navigation
   path: ^1.8.3
