@@ -50,11 +50,12 @@ class BarcodeScannerService {
     }
   }
 
-   // ← AJOUTER CETTE MÉTHODE PUBLIQUE
+  // ← AJOUTÉ: Méthode publique pour jouer le beep
   Future<void> playBeep() async {
     await _soundPlayer.playBeep();
   }
 
+  // ← AJOUTÉ: Méthode publique pour jouer l'erreur
   Future<void> playError() async {
     await _soundPlayer.playError();
   }

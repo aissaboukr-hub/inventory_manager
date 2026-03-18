@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:inventory_manager/core/utils/barcode_scanner.dart';
-import 'package:inventory_manager/core/utils/sound_player.dart';  // ← AJOUTER CECI
+import 'package:inventory_manager/core/utils/sound_player.dart';
 import 'package:inventory_manager/domain/entities/product.dart';
 import 'package:inventory_manager/domain/repositories/inventory_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -47,8 +47,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     _searchController.dispose();
     super.dispose();
   }
-
-  // ============ BUILD METHODS ============
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +98,11 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
           children: [
             MobileScanner(
               controller: _cameraController!,
-              onDetect: _isScanning && !_isProcessing ? _onBarcodeDetected : null,
+              onDetect: (capture) {
+                if (_isScanning && !_isProcessing) {
+                  _onBarcodeDetected(capture);
+                }
+              },
             ),
             Container(
               decoration: BoxDecoration(
@@ -368,8 +370,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     );
   }
 
-  // ============ ACTION METHODS ============
-
   void _onBarcodeDetected(BarcodeCapture capture) async {
     if (_isProcessing) return;
     
@@ -388,8 +388,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     }
 
     try {
-      // ← CORRIGÉ: Utilisation de _scannerService qui a déjà SoundPlayer
-      await _scannerService.playBeep();  // Ou créer une méthode publique dans BarcodeScannerService
+      await _scannerService.playBeep();
 
       _lastBarcode = code;
       
@@ -519,8 +518,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
       _cameraController?.toggleTorch();
     });
   }
-
-  // ============ HELPER METHODS ============
 
   void _showError(String message) {
     if (!mounted) return;
