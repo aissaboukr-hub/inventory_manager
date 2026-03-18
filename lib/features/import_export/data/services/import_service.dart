@@ -47,7 +47,7 @@ class ImportService {
         final designation = row.length > 1 ? row[1]?.value?.toString().trim() : null;
         final barcode = row.length > 2 ? row[2]?.value?.toString().trim() : null;
         final category = row.length > 3 ? row[3]?.value?.toString().trim() : null;
-        final unit = row.length > 4 ? row[4]?.value?.toString().trim() : 'U';
+        final unit = row.length > 4 ? row[4]?.value?.toString().trim() : null;
 
         if (code == null || code.isEmpty) {
           errors.add('Ligne ${i + 1}: Code manquant');
@@ -64,7 +64,7 @@ class ImportService {
           designation: Value(designation),
           barcode: Value(barcode?.isEmpty ?? true ? null : barcode),
           category: Value(category?.isEmpty ?? true ? null : category),
-          unit: Value(unit.isEmpty ? 'U' : unit),
+          unit: Value((unit?.isEmpty ?? true) ? 'U' : unit!),
           createdAt: Value(DateTime.now()),
           updatedAt: Value(DateTime.now()),
         ));

@@ -60,12 +60,21 @@ class InventoryItemWithProduct {
 
   InventoryItemWithProduct({required this.item, required this.product});
 
-  String get code => product.code;
-  String get designation => product.designation;
-  String? get barcode => product.barcode;
+  // Item getters
+  int get id => item.id;
+  int get inventoryId => item.inventoryId;
+  int get productId => item.productId;
   double get quantity => item.quantity;
   DateTime get timestamp => item.timestamp;
   String? get notes => item.notes;
+  String? get scannedBy => item.scannedBy;
+
+  // Product getters
+  String get code => product.code;
+  String get designation => product.designation;
+  String? get barcode => product.barcode;
+  String? get category => product.category;
+  String get unit => product.unit;
 }
 
 class ProductSummary {

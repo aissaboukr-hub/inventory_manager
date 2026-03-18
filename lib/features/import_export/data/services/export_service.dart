@@ -77,14 +77,13 @@ class ExportService {
   void _setupHeader(Sheet sheet, List<String> headers) {
     sheet.appendRow(headers.map((h) => TextCellValue(h)).toList());
     
-    // Style pour l'en-tête
     final headerRowIndex = 0;
     for (var i = 0; i < headers.length; i++) {
       final cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: headerRowIndex));
       cell.cellStyle = CellStyle(
         bold: true,
-        backgroundColorHex: '#4472C4',
-        fontColorHex: '#FFFFFF',
+        backgroundColorHex: ExcelColor.fromHexString('#4472C4'),
+        fontColorHex: ExcelColor.fromHexString('#FFFFFF'),
       );
     }
   }

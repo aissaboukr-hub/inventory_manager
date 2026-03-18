@@ -27,8 +27,8 @@ class InventoryItemModel {
 
   factory InventoryItemModel.fromDriftWithProduct(db.InventoryItemWithProduct drift) {
     return InventoryItemModel(
-      id: drift.itemId,
-      inventoryId: 0,
+      id: drift.id,                    // ← CORRIGÉ: was itemId
+      inventoryId: drift.inventoryId,  // ← CORRIGÉ: was 0
       productId: drift.productId,
       quantity: drift.quantity,
       timestamp: drift.timestamp,
@@ -36,11 +36,11 @@ class InventoryItemModel {
       scannedBy: drift.scannedBy,
       product: ProductModel(
         id: drift.productId,
-        code: drift.productCode,
-        designation: drift.productDesignation,
-        barcode: drift.productBarcode,
-        unit: drift.productUnit,
-        category: drift.productCategory,
+        code: drift.code,              // ← CORRIGÉ: was productCode
+        designation: drift.designation, // ← CORRIGÉ: was productDesignation
+        barcode: drift.barcode,        // ← CORRIGÉ: was productBarcode
+        unit: drift.unit,              // ← CORRIGÉ: was productUnit
+        category: drift.category,      // ← CORRIGÉ: was productCategory
       ),
     );
   }
