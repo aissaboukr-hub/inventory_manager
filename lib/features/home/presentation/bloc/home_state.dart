@@ -1,44 +1,34 @@
+// ← IMPORTANT: Doit être exactement comme ceci
 part of 'home_bloc.dart';
 
-abstract class HomeEvent extends Equatable {
-  const HomeEvent();  // ← AJOUTER const
+import 'package:equatable/equatable.dart';
+import 'package:inventory_manager/domain/entities/inventory.dart';
+
+abstract class HomeState extends Equatable {
+  const HomeState();
 
   @override
   List<Object?> get props => [];
 }
 
-class LoadInventoriesEvent extends HomeEvent {
-  const LoadInventoriesEvent();  // ← AJOUTER const constructeur
-}
+class HomeInitial extends HomeState {}
 
-class RefreshInventoriesEvent extends HomeEvent {
-  const RefreshInventoriesEvent();  // ← AJOUTER const constructeur
-}
+class HomeLoading extends HomeState {}
 
-class CreateInventoryEvent extends HomeEvent {
-  final String name;
-  final String? description;
+class HomeLoaded extends HomeState {
+  final List<Inventory> inventories;
 
-  const CreateInventoryEvent(this.name, {this.description});  // ← const déjà présent
+  const HomeLoaded({required this.inventories});
 
   @override
-  List<Object?> get props => [name, description];
+  List<Object?> get props => [inventories];
 }
 
-class UpdateInventoryEvent extends HomeEvent {
-  final Inventory inventory;
+class HomeError extends HomeState {
+  final String message;
 
-  const UpdateInventoryEvent(this.inventory);  // ← const déjà présent
-
-  @override
-  List<Object> get props => [inventory];
-}
-
-class DeleteInventoryEvent extends HomeEvent {
-  final int id;
-
-  const DeleteInventoryEvent(this.id);  // ← const déjà présent
+  const HomeError({required this.message});
 
   @override
-  List<Object> get props => [id];
+  List<Object?> get props => [message];
 }

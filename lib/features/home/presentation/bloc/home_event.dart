@@ -1,4 +1,8 @@
+// ← IMPORTANT: Doit être exactement comme ceci
 part of 'home_bloc.dart';
+
+import 'package:equatable/equatable.dart';
+import 'package:inventory_manager/domain/entities/inventory.dart';
 
 abstract class HomeEvent extends Equatable {
   const HomeEvent();
@@ -7,9 +11,13 @@ abstract class HomeEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadInventoriesEvent extends HomeEvent {}
+class LoadInventoriesEvent extends HomeEvent {
+  const LoadInventoriesEvent();
+}
 
-class RefreshInventoriesEvent extends HomeEvent {}
+class RefreshInventoriesEvent extends HomeEvent {
+  const RefreshInventoriesEvent();
+}
 
 class CreateInventoryEvent extends HomeEvent {
   final String name;

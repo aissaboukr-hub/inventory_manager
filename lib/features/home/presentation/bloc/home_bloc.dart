@@ -4,6 +4,7 @@ import 'package:inventory_manager/core/errors/failures.dart';
 import 'package:inventory_manager/domain/entities/inventory.dart';
 import 'package:inventory_manager/domain/repositories/inventory_repository.dart';
 
+// ← IMPORTANT: Ces lignes doivent être exactement comme ceci
 part 'home_event.dart';
 part 'home_state.dart';
 
