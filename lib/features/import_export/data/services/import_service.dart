@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:drift/drift.dart' as drift;  // ← AJOUTER CECI
 import 'package:file_picker/file_picker.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xlsio;
 import 'package:inventory_manager/data/datasources/local/database.dart';
@@ -26,7 +27,7 @@ class ImportService {
     final workbook = xlsio.Workbook.openStream(bytes);
     final worksheet = workbook.worksheets[0];
 
-    final products = <Product>[];
+    final products = <ProductsCompanion>[];
     final errors = <String>[];
 
     // Start from row 2 (skip header)
@@ -48,10 +49,13 @@ class ImportService {
           continue;
         }
 
-        products.add(Product(
-          code: code,
-          designation: designation,
-          barcode: barcode?.isEmpty ?? true ? null : barcode,
+        // ← CORRIGÉ: Utiliser directement ProductsCompanion
+        products.add(ProductsCompanion(
+          code: drift.Value(code),
+          designation: drift.Value(designation),
+          barcode: drift.Value(barcode?.isEmpty ?? true ? null : barcode),
+          category: const drift.Value.absent(),
+          unit: const drift.Value('U'),
         ));
       } catch (e) {
         errors.add('Ligne $i: Erreur - $e');
@@ -61,13 +65,7 @@ class ImportService {
     workbook.dispose();
 
     if (products.isNotEmpty) {
-      await _database.batchInsertProducts(
-        products.map((p) => ProductsCompanion(
-          code: Value(p.code),
-          designation: Value(p.designation),
-          barcode: Value(p.barcode),
-        )).toList(),
-      );
+      await _database.batchInsertProducts(products);
     }
 
     return ImportResult(
