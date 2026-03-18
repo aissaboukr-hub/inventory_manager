@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:drift/drift.dart' as drift;
+import 'package:drift/drift.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart';
 import 'package:inventory_manager/data/datasources/local/database.dart';
@@ -23,7 +23,6 @@ class ImportService {
     final file = File(result.files.single.path!);
     final bytes = await file.readAsBytes();
 
-    // Décoder le fichier Excel
     final excel = Excel.decodeBytes(bytes);
     final sheet = excel.tables[excel.tables.keys.first];
 
@@ -38,7 +37,6 @@ class ImportService {
     final products = <ProductsCompanion>[];
     final errors = <String>[];
 
-    // Commencer à la ligne 1 (après l'en-tête ligne 0)
     for (var i = 1; i < sheet.maxRows; i++) {
       try {
         final row = sheet.row(i);
@@ -48,6 +46,8 @@ class ImportService {
         final code = row[0]?.value?.toString().trim();
         final designation = row.length > 1 ? row[1]?.value?.toString().trim() : null;
         final barcode = row.length > 2 ? row[2]?.value?.toString().trim() : null;
+        final category = row.length > 3 ? row[3]?.value?.toString().trim() : null;
+        final unit = row.length > 4 ? row[4]?.value?.toString().trim() : 'U';
 
         if (code == null || code.isEmpty) {
           errors.add('Ligne ${i + 1}: Code manquant');
@@ -60,11 +60,13 @@ class ImportService {
         }
 
         products.add(ProductsCompanion(
-          code: drift.Value(code),
-          designation: drift.Value(designation),
-          barcode: drift.Value(barcode?.isEmpty ?? true ? null : barcode),
-          category: const drift.Value.absent(),
-          unit: const drift.Value('U'),
+          code: Value(code),
+          designation: Value(designation),
+          barcode: Value(barcode?.isEmpty ?? true ? null : barcode),
+          category: Value(category?.isEmpty ?? true ? null : category),
+          unit: Value(unit.isEmpty ? 'U' : unit),
+          createdAt: Value(DateTime.now()),
+          updatedAt: Value(DateTime.now()),
         ));
       } catch (e) {
         errors.add('Ligne ${i + 1}: Erreur - $e');
@@ -83,7 +85,7 @@ class ImportService {
   }
 
   Future<ImportResult> importFromGoogleSheets(String sheetId) async {
-    throw UnimplementedError();
+    throw UnimplementedError('Import Google Sheets non implémenté');
   }
 }
 
@@ -108,4 +110,12 @@ class ImportResult {
 
   bool get hasErrors => errorCount > 0;
   bool get isSuccess => successCount > 0 && errorCount == 0;
+  bool get isPartialSuccess => successCount > 0 && errorCount > 0;
+
+  String get message {
+    if (canceled) return 'Importation annulée';
+    if (isSuccess) return '$successCount produit(s) importé(s) avec succès';
+    if (isPartialSuccess) return '$successCount importé(s), $errorCount erreur(s)';
+    return 'Échec de l\'importation: ${errors.first}';
+  }
 }

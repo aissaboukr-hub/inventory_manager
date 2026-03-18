@@ -29,8 +29,13 @@ class ExportService {
         TextCellValue(row.designation),
         TextCellValue(row.barcode ?? ''),
         DoubleCellValue(row.quantity),
-        // ← CORRIGÉ: DateTimeCellValue avec named parameter 'value'
-        DateTimeCellValue(value: row.timestamp),
+        DateTimeCellValue(
+          year: row.timestamp.year,
+          month: row.timestamp.month,
+          day: row.timestamp.day,
+          hour: row.timestamp.hour,
+          minute: row.timestamp.minute,
+        ),
         TextCellValue(row.notes ?? ''),
       ]);
     }
@@ -42,8 +47,13 @@ class ExportService {
         TextCellValue(row.barcode ?? ''),
         DoubleCellValue(row.totalQuantity),
         TextCellValue(row.unit),
-        // ← CORRIGÉ: DateTimeCellValue avec named parameter 'value'
-        DateTimeCellValue(value: row.lastUpdate),
+        DateTimeCellValue(
+          year: row.lastUpdate.year,
+          month: row.lastUpdate.month,
+          day: row.lastUpdate.day,
+          hour: row.lastUpdate.hour,
+          minute: row.lastUpdate.minute,
+        ),
       ]);
     }
 
@@ -66,6 +76,17 @@ class ExportService {
 
   void _setupHeader(Sheet sheet, List<String> headers) {
     sheet.appendRow(headers.map((h) => TextCellValue(h)).toList());
+    
+    // Style pour l'en-tête
+    final headerRowIndex = 0;
+    for (var i = 0; i < headers.length; i++) {
+      final cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: headerRowIndex));
+      cell.cellStyle = CellStyle(
+        bold: true,
+        backgroundColorHex: '#4472C4',
+        fontColorHex: '#FFFFFF',
+      );
+    }
   }
 
   Future<void> shareFile(String filePath) async {
