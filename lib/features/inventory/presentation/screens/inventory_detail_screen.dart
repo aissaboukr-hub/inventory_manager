@@ -255,7 +255,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProductScannerScreen(
+        builder: (context) => InventoryListScreen(
           inventoryId: _currentInventory.id,
         ),
       ),
