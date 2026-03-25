@@ -1,4 +1,5 @@
 workflows:
+
   flutter-app-workflow:
     name: Inventory Manager CI/CD
     instance_type: mac_mini_m1
