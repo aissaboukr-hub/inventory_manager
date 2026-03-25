@@ -60,7 +60,6 @@ class InventoryItemWithProduct {
 
   InventoryItemWithProduct({required this.item, required this.product});
 
-  // Item getters
   int get id => item.id;
   int get inventoryId => item.inventoryId;
   int get productId => item.productId;
@@ -68,8 +67,6 @@ class InventoryItemWithProduct {
   DateTime get timestamp => item.timestamp;
   String? get notes => item.notes;
   String? get scannedBy => item.scannedBy;
-
-  // Product getters
   String get code => product.code;
   String get designation => product.designation;
   String? get barcode => product.barcode;
@@ -141,7 +138,6 @@ class AppDatabase extends _$AppDatabase {
   Future<List<ProductSummary>> getInventorySummary(int inventoryId) async {
     final query = customSelect('''
       SELECT 
-        p.id as product_id,
         p.code,
         p.designation,
         p.barcode,
@@ -168,53 +164,38 @@ class AppDatabase extends _$AppDatabase {
 
   // ========== MÉTHODES D'IMPORT (OPTIMISÉES) ==========
 
-  /// Insertion batch optimisée avec UPSERT SQLite pour gros volumes
   Future<void> batchInsertProducts(List<ProductsCompanion> productsList) async {
     if (productsList.isEmpty) return;
     
-    // Utiliser une transaction pour atomicité
     await transaction(() async {
-      final now = DateTime.now();
-      final nowSeconds = now.millisecondsSinceEpoch ~/ 1000;
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       
-      // Préparer les paramètres pour requête batch
-      final params = <List<dynamic>>[];
+      final valuesList = <String>[];
+      final args = <dynamic>[];
       
       for (final product in productsList) {
-        final code = product.code.value;
-        final designation = product.designation.value;
-        final barcode = product.barcode.value;
-        final category = product.category.value;
-        final unit = product.unit.value;
-        
-        // Paramètres: code, designation, barcode, category, unit, created_at, updated_at
-        params.add([
-          code,
-          designation,
-          barcode,
-          category,
-          unit,
-          nowSeconds,
-          nowSeconds,
+        valuesList.add('(?, ?, ?, ?, ?, ?, ?)');
+        args.addAll([
+          product.code.value,
+          product.designation.value,
+          product.barcode.value,
+          product.category.value,
+          product.unit.value,
+          now,
+          now,
         ]);
       }
       
-      // Exécuter UPSERT en une seule requête préparée réutilisée
-      final stmt = await customStatement('''
+      await customStatement('''
         INSERT INTO products (code, designation, barcode, category, unit, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES ${valuesList.join(', ')}
         ON CONFLICT(code) DO UPDATE SET
           designation = excluded.designation,
           barcode = excluded.barcode,
           category = excluded.category,
           unit = excluded.unit,
           updated_at = excluded.updated_at
-      ''');
-      
-      // Exécuter pour chaque produit dans un batch
-      for (final paramList in params) {
-        await stmt.executeWith(paramList);
-      }
+      ''', args);
     });
   }
 
