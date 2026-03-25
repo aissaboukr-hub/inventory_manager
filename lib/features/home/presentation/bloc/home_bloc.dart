@@ -47,9 +47,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) async {
     try {
+      // ✅ CORRIGÉ : name est positionnel, description est nommé
       await repository.createInventory(
-        name: event.name,
-        description: event.description,
+        event.name,                           // ← positionnel (requis)
+        description: event.description,       // ← nommé (optionnel)
       );
       final inventories = await repository.getAllInventories();
       emit(HomeLoaded(inventories));
@@ -63,10 +64,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) async {
     try {
+      // ✅ CORRIGÉ : updateInventory prend un objet Inventory complet
       await repository.updateInventory(
-        id: event.inventoryId,
-        name: event.name,
-        description: event.description,
+        Inventory(
+          id: event.inventoryId,
+          name: event.name,
+          description: event.description,
+          createdAt: DateTime.now(),    // sera ignoré par le DAO
+          updatedAt: DateTime.now(),    // sera utilisé pour la mise à jour
+        ),
       );
       final inventories = await repository.getAllInventories();
       emit(HomeLoaded(inventories));
