@@ -166,20 +166,54 @@ class AppDatabase extends _$AppDatabase {
     }).get();
   }
 
-  // ========== MÉTHODES D'IMPORT ==========
+  // ========== MÉTHODES D'IMPORT (OPTIMISÉES) ==========
 
+  /// Insertion batch optimisée avec UPSERT SQLite pour gros volumes
   Future<void> batchInsertProducts(List<ProductsCompanion> productsList) async {
-    await batch((batch) {
+    if (productsList.isEmpty) return;
+    
+    // Utiliser une transaction pour atomicité
+    await transaction(() async {
+      final now = DateTime.now();
+      final nowSeconds = now.millisecondsSinceEpoch ~/ 1000;
+      
+      // Préparer les paramètres pour requête batch
+      final params = <List<dynamic>>[];
+      
       for (final product in productsList) {
-        batch.insert(
-          products,
-          product,
-          onConflict: DoUpdate((old) => ProductsCompanion(
-            designation: product.designation,
-            barcode: product.barcode,
-            updatedAt: Value(DateTime.now()),
-          )),
-        );
+        final code = product.code.value;
+        final designation = product.designation.value;
+        final barcode = product.barcode.value;
+        final category = product.category.value;
+        final unit = product.unit.value;
+        
+        // Paramètres: code, designation, barcode, category, unit, created_at, updated_at
+        params.add([
+          code,
+          designation,
+          barcode,
+          category,
+          unit,
+          nowSeconds,
+          nowSeconds,
+        ]);
+      }
+      
+      // Exécuter UPSERT en une seule requête préparée réutilisée
+      final stmt = await customStatement('''
+        INSERT INTO products (code, designation, barcode, category, unit, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(code) DO UPDATE SET
+          designation = excluded.designation,
+          barcode = excluded.barcode,
+          category = excluded.category,
+          unit = excluded.unit,
+          updated_at = excluded.updated_at
+      ''');
+      
+      // Exécuter pour chaque produit dans un batch
+      for (final paramList in params) {
+        await stmt.executeWith(paramList);
       }
     });
   }
