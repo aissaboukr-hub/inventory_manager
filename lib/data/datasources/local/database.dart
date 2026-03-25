@@ -162,40 +162,50 @@ class AppDatabase extends _$AppDatabase {
     }).get();
   }
 
-  // ========== MÉTHODES D'IMPORT (OPTIMISÉES) ==========
+  // ========== MÉTHODES D'IMPORT (OPTIMISÉES AVEC CHUNKS) ==========
 
   Future<void> batchInsertProducts(List<ProductsCompanion> productsList) async {
     if (productsList.isEmpty) return;
     
+    // Limite SQLite: 999 variables / 7 colonnes = ~142 produits par batch
+    // On prend 140 pour avoir une marge de sécurité
+    const batchSize = 140;
+    
     await transaction(() async {
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       
-      final valuesList = <String>[];
-      final args = <dynamic>[];
-      
-      for (final product in productsList) {
-        valuesList.add('(?, ?, ?, ?, ?, ?, ?)');
-        args.addAll([
-          product.code.value,
-          product.designation.value,
-          product.barcode.value,
-          product.category.value,
-          product.unit.value,
-          now,
-          now,
-        ]);
+      // Traiter par chunks pour éviter "too many SQL variables"
+      for (var i = 0; i < productsList.length; i += batchSize) {
+        final end = (i + batchSize < productsList.length) ? i + batchSize : productsList.length;
+        final chunk = productsList.sublist(i, end);
+        
+        final valuesList = <String>[];
+        final args = <dynamic>[];
+        
+        for (final product in chunk) {
+          valuesList.add('(?, ?, ?, ?, ?, ?, ?)');
+          args.addAll([
+            product.code.value,
+            product.designation.value,
+            product.barcode.value,
+            product.category.value,
+            product.unit.value,
+            now,
+            now,
+          ]);
+        }
+        
+        await customStatement('''
+          INSERT INTO products (code, designation, barcode, category, unit, created_at, updated_at)
+          VALUES ${valuesList.join(', ')}
+          ON CONFLICT(code) DO UPDATE SET
+            designation = excluded.designation,
+            barcode = excluded.barcode,
+            category = excluded.category,
+            unit = excluded.unit,
+            updated_at = excluded.updated_at
+        ''', args);
       }
-      
-      await customStatement('''
-        INSERT INTO products (code, designation, barcode, category, unit, created_at, updated_at)
-        VALUES ${valuesList.join(', ')}
-        ON CONFLICT(code) DO UPDATE SET
-          designation = excluded.designation,
-          barcode = excluded.barcode,
-          category = excluded.category,
-          unit = excluded.unit,
-          updated_at = excluded.updated_at
-      ''', args);
     });
   }
 
