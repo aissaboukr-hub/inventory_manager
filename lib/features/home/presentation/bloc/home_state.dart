@@ -1,7 +1,5 @@
 part of 'home_bloc.dart';
 
-// ← PAS D'IMPORTS ICI - tout vient du home_bloc.dart
-
 abstract class HomeState extends Equatable {
   const HomeState();
 
@@ -16,7 +14,7 @@ class HomeLoading extends HomeState {}
 class HomeLoaded extends HomeState {
   final List<Inventory> inventories;
 
-  const HomeLoaded({required this.inventories});
+  const HomeLoaded(this.inventories);
 
   @override
   List<Object?> get props => [inventories];

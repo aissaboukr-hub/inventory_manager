@@ -75,7 +75,7 @@ class _InventoriesList extends StatelessWidget {
     );
   }
 
-  // ✅ CORRIGÉ : Utilise Navigator.push directement
+  // CORRIGÉ : Utilise Navigator.push directement
   void _navigateToDetail(BuildContext context, Inventory inventory) {
     Navigator.push(
       context,

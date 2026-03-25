@@ -1,7 +1,5 @@
 part of 'home_bloc.dart';
 
-// ← PAS D'IMPORTS ICI - tout vient du home_bloc.dart
-
 abstract class HomeEvent extends Equatable {
   const HomeEvent();
 
@@ -28,19 +26,25 @@ class CreateInventoryEvent extends HomeEvent {
 }
 
 class UpdateInventoryEvent extends HomeEvent {
-  final Inventory inventory;
+  final int inventoryId;
+  final String name;
+  final String? description;
 
-  const UpdateInventoryEvent(this.inventory);
+  const UpdateInventoryEvent({
+    required this.inventoryId,
+    required this.name,
+    this.description,
+  });
 
   @override
-  List<Object> get props => [inventory];
+  List<Object?> get props => [inventoryId, name, description];
 }
 
 class DeleteInventoryEvent extends HomeEvent {
-  final int id;
+  final int inventoryId;
 
-  const DeleteInventoryEvent(this.id);
+  const DeleteInventoryEvent(this.inventoryId);
 
   @override
-  List<Object> get props => [id];
+  List<Object> get props => [inventoryId];
 }

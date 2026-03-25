@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:inventory_manager/domain/entities/inventory.dart';
+import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';
+import 'package:inventory_manager/features/inventory/presentation/screens/product_scanner_screen.dart';
 
-class InventoryDetailScreen extends StatelessWidget {
+class InventoryDetailScreen extends StatefulWidget {
   final Inventory inventory;
 
   const InventoryDetailScreen({
@@ -11,19 +14,30 @@ class InventoryDetailScreen extends StatelessWidget {
   });
 
   @override
+  State<InventoryDetailScreen> createState() => _InventoryDetailScreenState();
+}
+
+class _InventoryDetailScreenState extends State<InventoryDetailScreen> {
+  late Inventory _currentInventory;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentInventory = widget.inventory;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(inventory.name),
+        title: Text(_currentInventory.name),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            onPressed: () {
-              // TODO: Modifier l'inventaire
-            },
+            onPressed: () => _showEditDialog(context),
           ),
         ],
       ),
@@ -61,16 +75,17 @@ class InventoryDetailScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                inventory.name,
+                                _currentInventory.name,
                                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
                               ),
-                              if (inventory.description != null && inventory.description!.isNotEmpty)
+                              if (_currentInventory.description != null && 
+                                  _currentInventory.description!.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
-                                    inventory.description!,
+                                    _currentInventory.description!,
                                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           color: Colors.grey[600],
                                         ),
@@ -85,19 +100,19 @@ class InventoryDetailScreen extends StatelessWidget {
                     _InfoRow(
                       icon: Icons.numbers_outlined,
                       label: 'Nombre d\'articles',
-                      value: '${inventory.itemCount ?? 0}',
+                      value: '${_currentInventory.itemCount ?? 0}',
                     ),
                     const SizedBox(height: 12),
                     _InfoRow(
                       icon: Icons.calendar_today_outlined,
                       label: 'Créé le',
-                      value: dateFormat.format(inventory.createdAt),
+                      value: dateFormat.format(_currentInventory.createdAt),
                     ),
                     const SizedBox(height: 12),
                     _InfoRow(
                       icon: Icons.update_outlined,
                       label: 'Dernière modification',
-                      value: dateFormat.format(inventory.updatedAt),
+                      value: dateFormat.format(_currentInventory.updatedAt),
                     ),
                   ],
                 ),
@@ -130,11 +145,9 @@ class InventoryDetailScreen extends StatelessWidget {
                   ),
                 ),
                 title: const Text('Voir les articles'),
-                subtitle: Text('${inventory.itemCount ?? 0} article(s)'),
+                subtitle: Text('${_currentInventory.itemCount ?? 0} article(s)'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  // TODO: Naviguer vers la liste des articles
-                },
+                onTap: () => _navigateToItemsList(context),
               ),
             ),
             
@@ -157,12 +170,105 @@ class InventoryDetailScreen extends StatelessWidget {
                 title: const Text('Scanner un produit'),
                 subtitle: const Text('Ajouter via code-barres/QR'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  // TODO: Ouvrir le scanner
-                },
+                onTap: () => _openScanner(context),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Modifier l'inventaire
+  void _showEditDialog(BuildContext context) {
+    final nameController = TextEditingController(text: _currentInventory.name);
+    final descController = TextEditingController(text: _currentInventory.description ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Modifier l\'inventaire'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Nom *',
+                hintText: 'Nom de l\'inventaire',
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                hintText: 'Optionnel',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (nameController.text.trim().isNotEmpty) {
+                // Envoi au BLoC
+                context.read<HomeBloc>().add(
+                  UpdateInventoryEvent(
+                    inventoryId: _currentInventory.id,
+                    name: nameController.text.trim(),
+                    description: descController.text.trim().isEmpty 
+                        ? null 
+                        : descController.text.trim(),
+                  ),
+                );
+                // Mise à jour locale immédiate
+                setState(() {
+                  _currentInventory = _currentInventory.copyWith(
+                    name: nameController.text.trim(),
+                    description: descController.text.trim().isEmpty 
+                        ? null 
+                        : descController.text.trim(),
+                  );
+                });
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Inventaire mis à jour')),
+                );
+              }
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Naviguer vers la liste des articles
+  void _navigateToItemsList(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProductScannerScreen(
+          inventoryId: _currentInventory.id,
+        ),
+      ),
+    );
+  }
+
+  // Ouvrir le scanner
+  void _openScanner(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProductScannerScreen(
+          inventoryId: _currentInventory.id,
         ),
       ),
     );
