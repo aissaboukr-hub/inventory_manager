@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:inventory_manager/config/routes.dart';
 import 'package:inventory_manager/domain/entities/inventory.dart';
 import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';
+import 'package:inventory_manager/features/inventory_detail/presentation/screens/inventory_detail_screen.dart'; // ← Import ajouté
 import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
 
@@ -25,7 +26,7 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       body: const _InventoriesList(),
-      floatingActionButton: const _AddInventoryFab(),  // ← const retiré si le constructeur n'est pas const
+      floatingActionButton: const _AddInventoryFab(),
     );
   }
 }
@@ -38,7 +39,7 @@ class _InventoriesList extends StatelessWidget {
     return BlocBuilder<HomeBloc, HomeState>(
       builder: (context, state) {
         if (state is HomeLoading) {
-          return const _LoadingShimmer();  // ← const retiré si le constructeur n'est pas const
+          return const _LoadingShimmer();
         }
 
         if (state is HomeError) {
@@ -47,7 +48,7 @@ class _InventoriesList extends StatelessWidget {
 
         if (state is HomeLoaded) {
           if (state.inventories.isEmpty) {
-            return const _EmptyState();  // ← const retiré si le constructeur n'est pas const
+            return const _EmptyState();
           }
 
           return RefreshIndicator(
@@ -74,11 +75,13 @@ class _InventoriesList extends StatelessWidget {
     );
   }
 
+  // ✅ CORRIGÉ : Utilise Navigator.push directement
   void _navigateToDetail(BuildContext context, Inventory inventory) {
-    Navigator.pushNamed(
+    Navigator.push(
       context,
-      AppRoutes.inventoryDetail,
-      arguments: inventory,
+      MaterialPageRoute(
+        builder: (context) => InventoryDetailScreen(inventory: inventory),
+      ),
     );
   }
 
