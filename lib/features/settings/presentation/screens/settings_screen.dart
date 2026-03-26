@@ -16,11 +16,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _appVersion = '1.0.0';
   int _productCount = 0;
   int _inventoryCount = 0;
+  String? _googleScriptUrl;
+  bool _isGoogleConnected = false;
 
   @override
   void initState() {
     super.initState();
     _loadStats();
+    _checkGoogleSheetsConfig();
   }
 
   Future<void> _loadStats() async {
@@ -31,6 +34,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _productCount = products.length;
       _inventoryCount = inventories.length;
+    });
+  }
+
+  // ✅ Vérifier la config Google Sheets au démarrage
+  Future<void> _checkGoogleSheetsConfig() async {
+    final database = AppDatabase();
+    final service = GoogleSheetsService(database);
+    
+    final url = await service.getScriptUrl();
+    final isConnected = await service.isConfigured();
+    
+    setState(() {
+      _googleScriptUrl = url;
+      _isGoogleConnected = isConnected;
     });
   }
 
@@ -50,6 +67,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: 'Depuis Excel (.xlsx)',
             onTap: _importFromExcel,
           ),
+	  // ✅ NOUVEAU : Importer depuis Google Sheets
+	  _buildListTile(
+  	    icon: Icons.cloud_download_outlined,
+    	    title: 'Importer depuis Google Sheets',
+ 	    subtitle: _isGoogleConnected ? '✅ Configuré' : '⚠️ Non configuré',
+	    color: _isGoogleConnected ? Colors.green : Colors.orange,
+	    onTap: _importFromGoogleSheets,
+	  ),
           _buildListTile(
             icon: Icons.cloud_upload_outlined,
             title: 'Connecter Google Sheets',
@@ -205,39 +230,211 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _configureGoogleSheets() {
+    final controller = TextEditingController(text: _googleScriptUrl ?? '');
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Configuration Google Sheets'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
+        title: const Row(
           children: [
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'ID du Script Google Apps',
-                hintText: 'https://script.google.com/macros/s/...',
-              ),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Pour configurer Google Sheets, vous devez déployer un Google Apps Script.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
+            Icon(Icons.cloud, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Google Sheets'),
           ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ✅ Champ URL du script
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'URL du Script Google Apps',
+                  hintText: 'https://script.google.com/macros/s/.../exec',
+                  prefixIcon: Icon(Icons.link),
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // ✅ Instructions
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Comment configurer:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '1. Créez un Google Apps Script\n'
+                      '2. Déployez comme Web App\n'
+                      '3. Copiez l\'URL ici',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // ✅ Statut actuel
+              if (_isGoogleConnected)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green.shade700, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Connecté',
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Annuler'),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Enregistrer'),
+          FilledButton.icon(
+            onPressed: () async {
+              final url = controller.text.trim();
+              if (url.isNotEmpty) {
+                final database = AppDatabase();
+                final service = GoogleSheetsService(database);
+                
+                await service.saveScriptUrl(url);
+                
+                // Tester la connexion
+                final isConnected = await service.testConnection();
+                
+                if (!mounted) return;
+                
+                setState(() {
+                  _googleScriptUrl = url;
+                  _isGoogleConnected = isConnected;
+                });
+                
+                Navigator.pop(context);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(isConnected 
+                        ? '✅ Connecté à Google Sheets' 
+                        : '⚠️ URL sauvegardée mais connexion échouée'),
+                    backgroundColor: isConnected ? Colors.green : Colors.orange,
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.save),
+            label: const Text('Enregistrer'),
           ),
         ],
       ),
     );
   }
+
+   // ✅ NOUVEAU : Importer depuis Google Sheets
+  Future<void> _importFromGoogleSheets() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final database = AppDatabase();
+      final service = GoogleSheetsService(database);
+      
+      if (!await service.isConfigured()) {
+        _configureGoogleSheets();
+        return;
+      }
+      
+      final result = await service.importFromSheet();
+      
+      if (!mounted) return;
+      
+      if (result.successCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ ${result.successCount} produits importés'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadStats();
+      }
+      
+      if (result.errorCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ ${result.errorCount} erreurs'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Détails',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Erreurs d\'import'),
+                    content: SizedBox(
+                      width: double.maxFinite,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: result.errors.length,
+                        itemBuilder: (context, index) => Text('• ${result.errors[index]}'),
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Fermer'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Erreur: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+  
 
   Future<void> _backupData() async {
     setState(() => _isLoading = true);

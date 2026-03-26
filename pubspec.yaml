@@ -36,6 +36,7 @@ dependencies:
   googleapis: ^11.4.0
   googleapis_auth: ^1.4.1
   http: ^1.1.0
+  shared_preferences: ^2.2.2
   
   # Audio
   audioplayers: ^5.2.1
