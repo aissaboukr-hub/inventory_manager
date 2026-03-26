@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:inventory_manager/domain/entities/inventory.dart';
 import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';
 import 'package:inventory_manager/features/inventory/presentation/screens/product_scanner_screen.dart';
+import 'package:inventory_manager/features/inventory/presentation/screens/inventory_items_screen.dart';
 
 class InventoryDetailScreen extends StatefulWidget {
   final Inventory inventory;
@@ -252,15 +253,16 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> {
 
   // Naviguer vers la liste des articles
   void _navigateToItemsList(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => InventoryListScreen(
-          inventoryId: _currentInventory.id,
-        ),
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => InventoryItemsScreen(
+        inventoryId: _currentInventory.id,
+        inventoryName: _currentInventory.name,
       ),
-    );
-  }
+    ),
+  );
+}
 
   // Ouvrir le scanner
   void _openScanner(BuildContext context) {
