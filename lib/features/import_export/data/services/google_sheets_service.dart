@@ -1,5 +1,4 @@
 import 'package:drift/drift.dart';
-import 'package:inventory_manager/database/app_database.dart'; // adapte le chemin
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
