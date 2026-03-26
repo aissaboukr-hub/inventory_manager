@@ -4,6 +4,7 @@ import 'package:inventory_manager/config/routes.dart';
 import 'package:inventory_manager/domain/entities/inventory.dart';
 import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';
 import 'package:inventory_manager/features/inventory/presentation/screens/inventory_detail_screen.dart';
+import 'package:inventory_manager/features/inventory/presentation/screens/inventory_items_screen.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
 
