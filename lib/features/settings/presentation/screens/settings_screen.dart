@@ -4,6 +4,7 @@ import 'package:inventory_manager/data/datasources/local/database.dart';
 import 'package:inventory_manager/features/import_export/data/services/export_service.dart';
 import 'package:inventory_manager/features/import_export/data/services/import_service.dart';
 import 'package:inventory_manager/features/import_export/data/services/google_sheets_service.dart';
+import 'package:drift/drift.dart' as drift;
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -138,7 +139,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          // ✅ Indicateur de progression avec texte
           if (_isLoading)
             Container(
               color: Colors.black54,
@@ -387,7 +387,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ✅ OPTIMISÉ : Import Google Sheets avec progression et batch
   Future<void> _importFromGoogleSheets() async {
     setState(() {
       _isLoading = true;
@@ -406,7 +405,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       
       setState(() => _loadingText = 'Récupération des données...');
       
-      // ✅ Utilise la nouvelle méthode optimisée avec batch
       final result = await service.importFromSheetOptimized(
         onProgress: (current, total) {
           setState(() {
@@ -606,7 +604,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           FilledButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _performCleanup();
+              await _performCleanupOptimized(); // ✅ Version optimisée
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.orange),
             child: const Text('Nettoyer'),
@@ -616,7 +614,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _performCleanup() async {
+  // ✅ VERSION OPTIMISÉE : Nettoyage rapide avec requête SQL unique
+  Future<void> _performCleanupOptimized() async {
+    setState(() {
+      _isLoading = true;
+      _loadingText = 'Analyse des données...';
+    });
+    
+    final stopwatch = Stopwatch()..start();
+    
+    try {
+      final database = AppDatabase();
+      
+      // ✅ OPTIMISATION 1 : Requête SQL unique pour trouver les orphelins
+      // Utilise NOT EXISTS au lieu de charger tout en mémoire
+      final orphanProducts = await database.customSelect('''
+        SELECT p.id 
+        FROM products p
+        WHERE NOT EXISTS (
+          SELECT 1 FROM inventory_items ii 
+          WHERE ii.product_id = p.id
+        )
+      ''').get();
+
+      final orphanCount = orphanProducts.length;
+      
+      if (orphanCount == 0) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ℹ️ Aucun produit orphelin à supprimer'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+        return;
+      }
+
+      setState(() => _loadingText = 'Suppression de $orphanCount produits...');
+
+      // ✅ OPTIMISATION 2 : Suppression par batch avec IN clause
+      const batchSize = 500;
+      int deletedCount = 0;
+
+      await database.transaction(() async {
+        for (var i = 0; i < orphanProducts.length; i += batchSize) {
+          final batch = orphanProducts.skip(i).take(batchSize).toList();
+          final ids = batch.map((row) => row.read<int>('id')).toList();
+          
+          // Suppression en une seule requête par batch
+          final deleted = await database.customUpdate(
+            'DELETE FROM products WHERE id IN (${ids.join(',')})',
+            updates: {database.products},
+          );
+          
+          deletedCount += deleted;
+          
+          // Mise à jour de la progression
+          if (i % (batchSize * 2) == 0) {
+            setState(() {
+              _loadingText = 'Suppression ${(i + batch.length).clamp(0, orphanCount)} / $orphanCount...';
+            });
+          }
+        }
+      });
+
+      stopwatch.stop();
+
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🧹 $deletedCount produit(s) supprimé(s) en ${stopwatch.elapsed.inSeconds}s'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      
+      _loadStats();
+      
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Erreur: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // ✅ Ancienne méthode conservée pour référence (lente)
+  Future<void> _performCleanupOld() async {
     setState(() {
       _isLoading = true;
       _loadingText = 'Nettoyage...';
@@ -625,6 +714,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final database = AppDatabase();
       
+      // LENT : Charge tout en mémoire
       final allProducts = await database.select(database.products).get();
       final inventoryItems = await database.select(database.inventoryItems).get();
       
@@ -632,6 +722,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       
       int deletedCount = 0;
       
+      // LENT : Suppression une par une
       for (final product in allProducts) {
         if (!usedProductIds.contains(product.id)) {
           await database.delete(database.products).delete(product);
