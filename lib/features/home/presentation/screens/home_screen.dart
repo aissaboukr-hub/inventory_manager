@@ -62,7 +62,7 @@ class _InventoriesList extends StatelessWidget {
                 final inventory = state.inventories[index];
                 return _InventoryCard(
                   inventory: inventory,
-                  onTap: () => _navigateToDetail(context, inventory),
+                  onTap: () => _navigateToItemsList(context),
                   onDelete: () => _confirmDelete(context, inventory),
                 );
               },
@@ -75,15 +75,18 @@ class _InventoriesList extends StatelessWidget {
     );
   }
 
-  // CORRIGÉ : Utilise Navigator.push directement
-  void _navigateToDetail(BuildContext context, Inventory inventory) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => InventoryDetailScreen(inventory: inventory),
+  // Naviguer vers la liste des articles
+  void _navigateToItemsList(BuildContext context) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => InventoryItemsScreen(
+        inventoryId: _currentInventory.id,
+        inventoryName: _currentInventory.name,
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _confirmDelete(BuildContext context, Inventory inventory) {
     showDialog(
