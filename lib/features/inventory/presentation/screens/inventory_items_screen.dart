@@ -94,7 +94,7 @@ class InventoryItemsScreen extends StatelessWidget {
           },
         ),
       ),
-    ).then((_) {
+    ).then((result) {
    	 // ✅ RAFRAÎCHIR AUSSI AU RETOUR (backup)
    	 if (result != null) {
       context.read<InventoryBloc>().add(LoadInventoryItemsEvent(inventoryId));
