@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:inventory_manager/data/datasources/local/database.dart';
 import 'package:inventory_manager/features/import_export/data/services/export_service.dart';
 import 'package:inventory_manager/features/import_export/data/services/import_service.dart';
-import 'package:inventory_manager/features/import_export/data/services/google_sheets_service.dart';
+import 'package:inventory_manager/data/datasources/remote/google_sheets_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

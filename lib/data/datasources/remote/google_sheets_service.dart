@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart';
+import 'package:inventory_manager/database/app_database.dart'; // adapte le chemin
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:googleapis/sheets/v4.dart' as sheets;
