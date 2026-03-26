@@ -473,6 +473,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // ✅ CORRIGÉ : Restaurer les données
   void _restoreData() {
     showDialog(
       context: context,
@@ -487,7 +488,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              Navigator.pop(context);
+              await _performRestore(); // ✅ Appel de la vraie fonction
+            },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Restaurer'),
           ),
@@ -496,6 +500,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ✅ NOUVEAU : Logique de restauration
+  Future<void> _performRestore() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final database = AppDatabase();
+      final importService = ImportService(database);
+      
+      // ✅ Importer et remplacer les données existantes
+      final result = await importService.restoreFromBackup();
+      
+      if (!mounted) return;
+      
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Données restaurées avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadStats(); // Recharger les stats
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Erreur: ${result.errorMessage}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Erreur: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // ✅ CORRIGÉ : Nettoyer les données
   void _cleanupData() {
     showDialog(
       context: context,
@@ -510,9 +557,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              _loadStats();
+              await _performCleanup(); // ✅ Appel de la vraie fonction
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.orange),
             child: const Text('Nettoyer'),
@@ -520,6 +567,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  // ✅ NOUVEAU : Logique de nettoyage
+  Future<void> _performCleanup() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final database = AppDatabase();
+      
+      // ✅ Récupérer tous les produits
+      final allProducts = await database.select(database.products).get();
+      
+      // ✅ Récupérer tous les items d'inventaire
+      final inventoryItems = await database.select(database.inventoryItems).get();
+      
+      // ✅ Trouver les IDs des produits utilisés
+      final usedProductIds = inventoryItems.map((item) => item.productId).toSet();
+      
+      // ✅ Supprimer les produits non utilisés
+      int deletedCount = 0;
+      
+      for (final product in allProducts) {
+        if (!usedProductIds.contains(product.id)) {
+          await database.delete(database.products).delete(product);
+          deletedCount++;
+        }
+      }
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🧹 $deletedCount produit(s) supprimé(s)'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      
+      _loadStats(); // Recharger les stats
+      
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Erreur: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   void _showHelp() {
