@@ -38,7 +38,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  // ✅ Vérifier la config Google Sheets au démarrage
   Future<void> _checkGoogleSheetsConfig() async {
     final database = AppDatabase();
     final service = GoogleSheetsService(database);
@@ -68,14 +67,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: 'Depuis Excel (.xlsx)',
             onTap: _importFromExcel,
           ),
-	  // ✅ NOUVEAU : Importer depuis Google Sheets
-	  _buildListTile(
-  	    icon: Icons.cloud_download_outlined,
-    	    title: 'Importer depuis Google Sheets',
- 	    subtitle: _isGoogleConnected ? '✅ Configuré' : '⚠️ Non configuré',
-	    color: _isGoogleConnected ? Colors.green : Colors.orange,
-	    onTap: _importFromGoogleSheets,
-	  ),
+          _buildListTile(
+            icon: Icons.cloud_download_outlined,
+            title: 'Importer depuis Google Sheets',
+            subtitle: _isGoogleConnected ? '✅ Configuré' : '⚠️ Non configuré',
+            color: _isGoogleConnected ? Colors.green : Colors.orange,
+            onTap: _importFromGoogleSheets,
+          ),
           _buildListTile(
             icon: Icons.cloud_upload_outlined,
             title: 'Connecter Google Sheets',
@@ -248,7 +246,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ✅ Champ URL du script
               TextField(
                 controller: controller,
                 decoration: const InputDecoration(
@@ -260,7 +257,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               
               const SizedBox(height: 16),
               
-              // ✅ Instructions
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -293,7 +289,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               
               const SizedBox(height: 12),
               
-              // ✅ Statut actuel
               if (_isGoogleConnected)
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -332,7 +327,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 
                 await service.saveScriptUrl(url);
                 
-                // Tester la connexion
                 final isConnected = await service.testConnection();
                 
                 if (!mounted) return;
@@ -362,7 +356,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-   // ✅ NOUVEAU : Importer depuis Google Sheets
   Future<void> _importFromGoogleSheets() async {
     setState(() => _isLoading = true);
     
@@ -473,14 +466,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ✅ CORRIGÉ : Restaurer les données
+  // ✅ CORRIGÉ : Restaurer les données - utilise importFromExcel existant
   void _restoreData() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Restaurer les données'),
         content: const Text(
-          'Cette action remplacera toutes les données actuelles. Êtes-vous sûr ?'
+          'Cette action ajoutera les produits du fichier Excel. Les doublons seront ignorés. Continuer ?'
         ),
         actions: [
           TextButton(
@@ -490,7 +483,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           FilledButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _performRestore(); // ✅ Appel de la vraie fonction
+              await _performRestore(); // ✅ Utilise importFromExcel
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Restaurer'),
@@ -500,7 +493,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ✅ NOUVEAU : Logique de restauration
+  // ✅ CORRIGÉ : Utilise la méthode existante importFromExcel
   Future<void> _performRestore() async {
     setState(() => _isLoading = true);
     
@@ -508,24 +501,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final database = AppDatabase();
       final importService = ImportService(database);
       
-      // ✅ Importer et remplacer les données existantes
-      final result = await importService.restoreFromBackup();
+      // ✅ Utilise la méthode existante importFromExcel
+      final result = await importService.importFromExcel();
       
       if (!mounted) return;
       
-      if (result.success) {
+      if (result.successCount > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Données restaurées avec succès'),
+          SnackBar(
+            content: Text('✅ ${result.successCount} produits restaurés'),
             backgroundColor: Colors.green,
           ),
         );
-        _loadStats(); // Recharger les stats
-      } else {
+        _loadStats();
+      } else if (result.errorCount > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Erreur: ${result.errorMessage}'),
+            content: Text('❌ ${result.errorCount} erreurs lors de la restauration'),
             backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ℹ️ Aucun nouveau produit à importer'),
+            backgroundColor: Colors.blue,
           ),
         );
       }
@@ -549,7 +549,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Nettoyer les données'),
         content: const Text(
-          'Supprimer les produits qui ne sont dans aucun inventaire ?'
+          'Supprimer les produits qui ne sont dans aucun inventaire ? Cette action est irréversible.'
         ),
         actions: [
           TextButton(
@@ -559,7 +559,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           FilledButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _performCleanup(); // ✅ Appel de la vraie fonction
+              await _performCleanup();
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.orange),
             child: const Text('Nettoyer'),
@@ -569,23 +569,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ✅ NOUVEAU : Logique de nettoyage
+  // ✅ CORRIGÉ : Logique de nettoyage complète
   Future<void> _performCleanup() async {
     setState(() => _isLoading = true);
     
     try {
       final database = AppDatabase();
       
-      // ✅ Récupérer tous les produits
+      // Récupérer tous les produits
       final allProducts = await database.select(database.products).get();
       
-      // ✅ Récupérer tous les items d'inventaire
+      // Récupérer tous les items d'inventaire
       final inventoryItems = await database.select(database.inventoryItems).get();
       
-      // ✅ Trouver les IDs des produits utilisés
+      // Trouver les IDs des produits utilisés
       final usedProductIds = inventoryItems.map((item) => item.productId).toSet();
       
-      // ✅ Supprimer les produits non utilisés
+      // Supprimer les produits non utilisés
       int deletedCount = 0;
       
       for (final product in allProducts) {
@@ -599,12 +599,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('🧹 $deletedCount produit(s) supprimé(s)'),
+          content: Text('🧹 $deletedCount produit(s) orphelin(s) supprimé(s)'),
           backgroundColor: Colors.orange,
         ),
       );
       
-      _loadStats(); // Recharger les stats
+      _loadStats();
       
     } catch (e) {
       if (!mounted) return;
