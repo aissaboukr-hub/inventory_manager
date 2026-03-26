@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:inventory_manager/data/datasources/local/database.dart'; // ✅ Chemin corrigé
+import 'package:inventory_manager/data/datasources/local/database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GoogleSheetsService {
@@ -11,25 +11,21 @@ class GoogleSheetsService {
 
   GoogleSheetsService(this._database);
 
-  // Sauvegarder l'URL du script
   Future<void> saveScriptUrl(String url) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_scriptUrlKey, url);
   }
 
-  // Récupérer l'URL du script
   Future<String?> getScriptUrl() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_scriptUrlKey);
   }
 
-  // Vérifier si configuré
   Future<bool> isConfigured() async {
     final url = await getScriptUrl();
     return url != null && url.isNotEmpty;
   }
 
-  // Tester la connexion
   Future<bool> testConnection() async {
     try {
       final url = await getScriptUrl();
@@ -50,7 +46,6 @@ class GoogleSheetsService {
     }
   }
 
-  // Importer depuis Google Sheets
   Future<ImportResult> importFromSheet() async {
     try {
       final url = await getScriptUrl();
@@ -79,13 +74,25 @@ class GoogleSheetsService {
 
       for (final productData in products) {
         try {
+          // ✅ CORRIGÉ : Conversion sécurisée des types
+          final code = _toString(productData['code']);
+          final designation = _toString(productData['designation']);
+          final barcode = _toStringNullable(productData['barcode']);
+
+          if (code == null || code.isEmpty) {
+            throw Exception('Code manquant');
+          }
+          if (designation == null || designation.isEmpty) {
+            throw Exception('Designation manquante');
+          }
+
           await _database.into(_database.products).insert(
             ProductsCompanion(
-              code: Value(productData['code'] as String),
-              designation: Value(productData['designation'] as String),
-              barcode: Value(productData['barcode'] as String?),
-              category: Value.absent(), // Pas utilisé
-              unit: Value('U'), // Valeur par défaut
+              code: Value(code),
+              designation: Value(designation),
+              barcode: Value(barcode),
+              category: Value.absent(),
+              unit: Value('U'),
             ),
             mode: InsertMode.insertOrReplace,
           );
@@ -110,13 +117,11 @@ class GoogleSheetsService {
     }
   }
 
-  // Exporter vers Google Sheets
   Future<bool> exportToSheet(int inventoryId, String inventoryName) async {
     try {
       final url = await getScriptUrl();
       if (url == null) return false;
 
-      // Récupérer les items de l'inventaire avec leurs produits
       final items = await _database.customSelect('''
         SELECT ii.*, p.code, p.designation, p.unit
         FROM inventory_items ii
@@ -147,6 +152,22 @@ class GoogleSheetsService {
       print('Export error: $e');
       return false;
     }
+  }
+
+  // ✅ Helper : Convertit n'importe quel type en String
+  String? _toString(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is int) return value.toString();
+    if (value is double) return value.toString();
+    return value.toString();
+  }
+
+  // ✅ Helper : Convertit en String ou null
+  String? _toStringNullable(dynamic value) {
+    if (value == null) return null;
+    if (value is String && value.isEmpty) return null;
+    return _toString(value);
   }
 }
 
