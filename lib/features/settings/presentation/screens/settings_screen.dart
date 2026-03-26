@@ -14,6 +14,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = false;
+  String _loadingText = '';
   String _appVersion = '1.0.0';
   int _productCount = 0;
   int _inventoryCount = 0;
@@ -58,81 +59,108 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Paramètres'),
         centerTitle: true,
       ),
-      body: ListView(
+      body: Stack(
         children: [
-          _buildSectionHeader('Import / Export'),
-          _buildListTile(
-            icon: Icons.file_upload_outlined,
-            title: 'Importer des produits',
-            subtitle: 'Depuis Excel (.xlsx)',
-            onTap: _importFromExcel,
+          ListView(
+            children: [
+              _buildSectionHeader('Import / Export'),
+              _buildListTile(
+                icon: Icons.file_upload_outlined,
+                title: 'Importer des produits',
+                subtitle: 'Depuis Excel (.xlsx)',
+                onTap: _importFromExcel,
+              ),
+              _buildListTile(
+                icon: Icons.cloud_download_outlined,
+                title: 'Importer depuis Google Sheets',
+                subtitle: _isGoogleConnected ? '✅ Configuré' : '⚠️ Non configuré',
+                color: _isGoogleConnected ? Colors.green : Colors.orange,
+                onTap: _importFromGoogleSheets,
+              ),
+              _buildListTile(
+                icon: Icons.cloud_upload_outlined,
+                title: 'Connecter Google Sheets',
+                subtitle: 'Configuration API',
+                onTap: _configureGoogleSheets,
+              ),
+              
+              const Divider(),
+              
+              _buildSectionHeader('Données'),
+              _buildListTile(
+                icon: Icons.backup_outlined,
+                title: 'Sauvegarder',
+                subtitle: 'Exporter toutes les données',
+                onTap: _backupData,
+              ),
+              _buildListTile(
+                icon: Icons.restore_outlined,
+                title: 'Restaurer',
+                subtitle: 'Importer une sauvegarde',
+                onTap: _restoreData,
+              ),
+              _buildListTile(
+                icon: Icons.delete_sweep_outlined,
+                title: 'Nettoyer les données',
+                subtitle: 'Supprimer les produits inutilisés',
+                color: Colors.orange,
+                onTap: _cleanupData,
+              ),
+              
+              const Divider(),
+              
+              _buildSectionHeader('Statistiques'),
+              _buildStatTile(
+                icon: Icons.inventory_2_outlined,
+                label: 'Produits en base',
+                value: '$_productCount',
+              ),
+              _buildStatTile(
+                icon: Icons.folder_open_outlined,
+                label: 'Inventaires créés',
+                value: '$_inventoryCount',
+              ),
+              
+              const Divider(),
+              
+              _buildSectionHeader('À propos'),
+              _buildListTile(
+                icon: Icons.info_outlined,
+                title: 'Version',
+                subtitle: _appVersion,
+                onTap: null,
+              ),
+              _buildListTile(
+                icon: Icons.help_outline,
+                title: 'Aide & Support',
+                subtitle: 'Documentation et contact',
+                onTap: _showHelp,
+              ),
+            ],
           ),
-          _buildListTile(
-            icon: Icons.cloud_download_outlined,
-            title: 'Importer depuis Google Sheets',
-            subtitle: _isGoogleConnected ? '✅ Configuré' : '⚠️ Non configuré',
-            color: _isGoogleConnected ? Colors.green : Colors.orange,
-            onTap: _importFromGoogleSheets,
-          ),
-          _buildListTile(
-            icon: Icons.cloud_upload_outlined,
-            title: 'Connecter Google Sheets',
-            subtitle: 'Configuration API',
-            onTap: _configureGoogleSheets,
-          ),
-          
-          const Divider(),
-          
-          _buildSectionHeader('Données'),
-          _buildListTile(
-            icon: Icons.backup_outlined,
-            title: 'Sauvegarder',
-            subtitle: 'Exporter toutes les données',
-            onTap: _backupData,
-          ),
-          _buildListTile(
-            icon: Icons.restore_outlined,
-            title: 'Restaurer',
-            subtitle: 'Importer une sauvegarde',
-            onTap: _restoreData,
-          ),
-          _buildListTile(
-            icon: Icons.delete_sweep_outlined,
-            title: 'Nettoyer les données',
-            subtitle: 'Supprimer les produits inutilisés',
-            color: Colors.orange,
-            onTap: _cleanupData,
-          ),
-          
-          const Divider(),
-          
-          _buildSectionHeader('Statistiques'),
-          _buildStatTile(
-            icon: Icons.inventory_2_outlined,
-            label: 'Produits en base',
-            value: '$_productCount',
-          ),
-          _buildStatTile(
-            icon: Icons.folder_open_outlined,
-            label: 'Inventaires créés',
-            value: '$_inventoryCount',
-          ),
-          
-          const Divider(),
-          
-          _buildSectionHeader('À propos'),
-          _buildListTile(
-            icon: Icons.info_outlined,
-            title: 'Version',
-            subtitle: _appVersion,
-            onTap: null,
-          ),
-          _buildListTile(
-            icon: Icons.help_outline,
-            title: 'Aide & Support',
-            subtitle: 'Documentation et contact',
-            onTap: _showHelp,
-          ),
+          // ✅ Indicateur de progression avec texte
+          if (_isLoading)
+            Container(
+              color: Colors.black54,
+              child: Center(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(
+                          _loadingText,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -188,7 +216,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _importFromExcel() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadingText = 'Importation Excel...';
+    });
     
     try {
       final database = AppDatabase();
@@ -356,26 +387,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ✅ OPTIMISÉ : Import Google Sheets avec progression et batch
   Future<void> _importFromGoogleSheets() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadingText = 'Connexion à Google Sheets...';
+    });
     
     try {
       final database = AppDatabase();
       final service = GoogleSheetsService(database);
       
       if (!await service.isConfigured()) {
+        setState(() => _isLoading = false);
         _configureGoogleSheets();
         return;
       }
       
-      final result = await service.importFromSheet();
+      setState(() => _loadingText = 'Récupération des données...');
+      
+      // ✅ Utilise la nouvelle méthode optimisée avec batch
+      final result = await service.importFromSheetOptimized(
+        onProgress: (current, total) {
+          setState(() {
+            _loadingText = 'Importation $current / $total...';
+          });
+        },
+      );
       
       if (!mounted) return;
       
       if (result.successCount > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ ${result.successCount} produits importés'),
+            content: Text('✅ ${result.successCount} produits importés en ${result.duration.inSeconds}s'),
             backgroundColor: Colors.green,
           ),
         );
@@ -431,7 +476,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
 
   Future<void> _backupData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadingText = 'Sauvegarde...';
+    });
     
     try {
       final database = AppDatabase();
@@ -466,7 +514,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ✅ CORRIGÉ : Restaurer les données - utilise importFromExcel existant
   void _restoreData() {
     showDialog(
       context: context,
@@ -483,7 +530,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           FilledButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _performRestore(); // ✅ Utilise importFromExcel
+              await _performRestore();
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Restaurer'),
@@ -493,15 +540,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ✅ CORRIGÉ : Utilise la méthode existante importFromExcel
   Future<void> _performRestore() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadingText = 'Restauration...';
+    });
     
     try {
       final database = AppDatabase();
       final importService = ImportService(database);
       
-      // ✅ Utilise la méthode existante importFromExcel
       final result = await importService.importFromExcel();
       
       if (!mounted) return;
@@ -542,7 +590,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ✅ CORRIGÉ : Nettoyer les données
   void _cleanupData() {
     showDialog(
       context: context,
@@ -569,23 +616,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ✅ CORRIGÉ : Logique de nettoyage complète
   Future<void> _performCleanup() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadingText = 'Nettoyage...';
+    });
     
     try {
       final database = AppDatabase();
       
-      // Récupérer tous les produits
       final allProducts = await database.select(database.products).get();
-      
-      // Récupérer tous les items d'inventaire
       final inventoryItems = await database.select(database.inventoryItems).get();
       
-      // Trouver les IDs des produits utilisés
       final usedProductIds = inventoryItems.map((item) => item.productId).toSet();
       
-      // Supprimer les produits non utilisés
       int deletedCount = 0;
       
       for (final product in allProducts) {
