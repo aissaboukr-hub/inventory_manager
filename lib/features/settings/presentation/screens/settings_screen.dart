@@ -1,5 +1,3 @@
-import 'package:drift/drift.dart';
-import 'package:inventory_manager/database/app_database.dart'; // adapte le chemin
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:inventory_manager/data/datasources/local/database.dart';
