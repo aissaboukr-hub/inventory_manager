@@ -271,6 +271,14 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> {
       MaterialPageRoute(
         builder: (context) => ProductScannerScreen(
           inventoryId: _currentInventory.id,
+	  onProductScanned: (product, quantity) {
+          // ✅ Incrémenter le compteur local immédiatement
+          	setState(() {
+            _currentInventory = _currentInventory.copyWith(
+              itemCount: (_currentInventory.itemCount ?? 0) + 1,
+            );
+          });
+         },
         ),
       ),
     );

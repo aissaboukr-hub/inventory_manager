@@ -9,8 +9,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ProductScannerScreen extends StatefulWidget {
   final int inventoryId;
+  final Function(Product, double)? onProductScanned; // ← AJOUTÉ : Callback optionnel
 
-  const ProductScannerScreen({super.key, required this.inventoryId});
+  const ProductScannerScreen({
+    super.key, 
+    required this.inventoryId,
+    this.onProductScanned, // ← AJOUTÉ
+  });
 
   @override
   State<ProductScannerScreen> createState() => _ProductScannerScreenState();
@@ -186,36 +191,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             child: _isNewProduct 
                 ? _buildNewProductForm() 
                 : _buildProductInfo(),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline, size: 32),
-                onPressed: () => _updateQuantity(-1),
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _quantityController,
-                  textAlign: TextAlign.center,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  decoration: const InputDecoration(
-                    labelText: 'Quantité',
-                    border: OutlineInputBorder(),
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*')),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline, size: 32),
-                onPressed: () => _updateQuantity(1),
-              ),
-            ],
           ),
           
           const SizedBox(height: 16),
@@ -475,6 +450,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
         : newValue.toStringAsFixed(2);
   }
 
+  // ✅ CORRIGÉ : Ajout du callback et retour à l'écran précédent
   void _validateEntry() async {
     final quantity = double.tryParse(_quantityController.text);
     if (quantity == null || quantity == 0) {
@@ -493,20 +469,23 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     }
 
     try {
-      await context.read<InventoryRepository>().addInventoryItem(
+      // Ajouter l'article à l'inventaire
+      final newItem = await context.read<InventoryRepository>().addInventoryItem(
         inventoryId: widget.inventoryId,
         productId: _scannedProduct!.id!,
         quantity: quantity,
       );
 
-      setState(() {
-        _scannedProduct = null;
-        _isNewProduct = false;
-        _lastBarcode = null;
-        _quantityController.text = '1';
-      });
-
       _showSuccess('Article ajouté: ${quantity > 0 ? '+' : ''}$quantity');
+
+      // ✅ APPEL DU CALLBACK si défini
+      if (widget.onProductScanned != null) {
+        widget.onProductScanned!(_scannedProduct!, quantity);
+      }
+
+      // ✅ RETOURNER L'ITEM À L'ÉCRAN PRÉCÉDENT
+      Navigator.pop(context, newItem);
+
     } catch (e) {
       _showError('Erreur lors de l\'ajout: $e');
     }

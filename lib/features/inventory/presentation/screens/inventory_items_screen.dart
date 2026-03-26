@@ -88,11 +88,17 @@ class InventoryItemsScreen extends StatelessWidget {
       MaterialPageRoute(
         builder: (context) => ProductScannerScreen(
           inventoryId: inventoryId,
+	  onProductScanned: (product, quantity) {
+          // ✅ RAFRAÎCHIR IMMÉDIATEMENT
+          context.read<InventoryBloc>().add(LoadInventoryItemsEvent(inventoryId));
+          },
         ),
       ),
     ).then((_) {
-      // Rafraîchir la liste après retour du scanner
-      context.read<InventoryBloc>().add(RefreshInventoryItemsEvent(inventoryId));
+   	 // ✅ RAFRAÎCHIR AUSSI AU RETOUR (backup)
+   	 if (result != null) {
+      context.read<InventoryBloc>().add(LoadInventoryItemsEvent(inventoryId));
+    	}
     });
   }
 }
