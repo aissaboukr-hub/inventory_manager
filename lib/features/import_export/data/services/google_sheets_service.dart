@@ -1,9 +1,9 @@
 import 'package:drift/drift.dart';
 import 'package:inventory_manager/database/app_database.dart'; // adapte le chemin
-import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:inventory_manager/data/datasources/local/database.dart';
-import 'package:inventory_manager/data/models/product_model.dart';
+import 'dart:convert';
+import 'package:inventory_manager/data/datasources/local/database.dart'; // ✅ Chemin corrigé
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GoogleSheetsService {
@@ -36,9 +36,17 @@ class GoogleSheetsService {
       final url = await getScriptUrl();
       if (url == null) return false;
 
-      final response = await http.get(Uri.parse('$url?action=test'));
-      return response.statusCode == 200;
+      final response = await http.get(
+        Uri.parse('$url?action=test'),
+        headers: {'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200) return false;
+
+      final data = jsonDecode(response.body);
+      return data['success'] == true;
     } catch (e) {
+      print('Test connection error: $e');
       return false;
     }
   }
@@ -54,7 +62,7 @@ class GoogleSheetsService {
       final response = await http.get(
         Uri.parse('$url?action=getProducts'),
         headers: {'Accept': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode != 200) {
         throw Exception('Erreur HTTP: ${response.statusCode}');
@@ -77,8 +85,8 @@ class GoogleSheetsService {
               code: Value(productData['code'] as String),
               designation: Value(productData['designation'] as String),
               barcode: Value(productData['barcode'] as String?),
-              category: Value(productData['category'] as String?),
-              unit: Value(productData['unit'] as String? ?? 'U'),
+              category: Value.absent(), // Pas utilisé
+              unit: Value('U'), // Valeur par défaut
             ),
             mode: InsertMode.insertOrReplace,
           );
@@ -109,7 +117,7 @@ class GoogleSheetsService {
       final url = await getScriptUrl();
       if (url == null) return false;
 
-      // Récupérer les items de l'inventaire
+      // Récupérer les items de l'inventaire avec leurs produits
       final items = await _database.customSelect('''
         SELECT ii.*, p.code, p.designation, p.unit
         FROM inventory_items ii
@@ -118,11 +126,11 @@ class GoogleSheetsService {
       ''', variables: [Variable(inventoryId)]).get();
 
       final exportData = items.map((row) => {
-        'code': row.data['code'],
-        'designation': row.data['designation'],
-        'quantity': row.data['quantity'],
-        'unit': row.data['unit'],
-        'notes': row.data['notes'],
+        'code': row.read<String>('code'),
+        'designation': row.read<String>('designation'),
+        'quantity': row.read<double>('quantity'),
+        'unit': row.read<String>('unit') ?? 'U',
+        'notes': row.read<String?>('notes'),
       }).toList();
 
       final response = await http.post(
@@ -133,10 +141,11 @@ class GoogleSheetsService {
           'inventoryName': inventoryName,
           'items': exportData,
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       return response.statusCode == 200;
     } catch (e) {
+      print('Export error: $e');
       return false;
     }
   }
