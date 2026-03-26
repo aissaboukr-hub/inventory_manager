@@ -46,12 +46,10 @@ class GoogleSheetsService {
     }
   }
 
-  // ✅ MÉTHODE ORIGINALE (conservée pour compatibilité)
   Future<ImportResult> importFromSheet() async {
     return importFromSheetOptimized();
   }
 
-  // ✅ NOUVELLE MÉTHODE : Import optimisé avec batch et progression
   Future<ImportResult> importFromSheetOptimized({
     void Function(int current, int total)? onProgress,
   }) async {
@@ -63,7 +61,6 @@ class GoogleSheetsService {
         throw Exception('URL du script non configurée');
       }
 
-      // ✅ Une seule requête HTTP pour tout récupérer
       final response = await http.get(
         Uri.parse('$url?action=getProducts'),
         headers: {'Accept': 'application/json'},
@@ -85,13 +82,11 @@ class GoogleSheetsService {
       int errorCount = 0;
       List<String> errors = [];
 
-      // ✅ Traitement par batch de 50 pour la base de données
       const batchSize = 50;
       
       for (var i = 0; i < products.length; i += batchSize) {
         final batch = products.skip(i).take(batchSize).toList();
         
-        // ✅ Transaction batch - beaucoup plus rapide !
         await _database.transaction(() async {
           for (final productData in batch) {
             try {
@@ -109,7 +104,6 @@ class GoogleSheetsService {
           }
         });
         
-        // Notifier la progression
         onProgress?.call((i + batch.length).clamp(0, total), total);
       }
 
@@ -132,15 +126,30 @@ class GoogleSheetsService {
     }
   }
 
-  // ✅ Helper : Parse les données produit en companion
+  // ✅ CORRIGÉ : Validation robuste du code
   ProductsCompanion _parseProductData(Map<String, dynamic> data) {
-    final code = _toString(data['code']);
+    String? code = _toString(data['code']);
     final designation = _toString(data['designation']);
     final barcode = _toStringNullable(data['barcode']);
 
+    // ✅ Détection et correction des dates converties
+    if (code != null && _looksLikeDate(code)) {
+      print('⚠️ Date détectée dans le code, tentative de conversion: $code');
+      // Essayer de récupérer le format original si possible
+      code = _extractCodeFromDateString(code);
+    }
+
+    // ✅ Validation et troncature
     if (code == null || code.isEmpty) {
       throw Exception('Code manquant');
     }
+    
+    // Tronquer à 50 caractères (limite de la DB)
+    if (code.length > 50) {
+      print('⚠️ Code trop long (${code.length} chars), tronqué à 50: ${code.substring(0, 50)}');
+      code = code.substring(0, 50);
+    }
+
     if (designation == null || designation.isEmpty) {
       throw Exception('Designation manquante');
     }
@@ -152,6 +161,36 @@ class GoogleSheetsService {
       category: Value.absent(),
       unit: Value('U'),
     );
+  }
+
+  // ✅ Détecte si une chaîne ressemble à une date
+  bool _looksLikeDate(String value) {
+    final datePatterns = [
+      r'^\w{3} \w{3} \d{2} \d{4}',  // Wed Apr 01 1018
+      r'GMT[+-]\d{4}',               // Contient GMT
+      r'\d{2}/\d{2}/\d{4}',          // 01/04/1018
+    ];
+    
+    return datePatterns.any((pattern) => 
+      RegExp(pattern, caseSensitive: false).hasMatch(value)
+    );
+  }
+
+  // ✅ Essaie d'extraire un code valide d'une date
+  String _extractCodeFromDateString(String value) {
+    // Si c'est une date au format JJ/MM/AAAA, la garder comme ça
+    final dateMatch = RegExp(r'(\d{2})/(\d{2})/(\d{4})').firstMatch(value);
+    if (dateMatch != null) {
+      return '${dateMatch.group(1)}/${dateMatch.group(2)}/${dateMatch.group(3)}';
+    }
+    
+    // Si c'est une date longue, essayer de trouver un pattern de code
+    if (value.contains('GMT')) {
+      // Retourner une valeur par défaut ou essayer de parser
+      return 'CODE_DATE_INVALIDE';
+    }
+    
+    return value;
   }
 
   Future<bool> exportToSheet(int inventoryId, String inventoryName) async {
@@ -191,16 +230,14 @@ class GoogleSheetsService {
     }
   }
 
-  // ✅ Helper : Convertit n'importe quel type en String
   String? _toString(dynamic value) {
     if (value == null) return null;
-    if (value is String) return value;
+    if (value is String) return value.trim();
     if (value is int) return value.toString();
     if (value is double) return value.toString();
-    return value.toString();
+    return value.toString().trim();
   }
 
-  // ✅ Helper : Convertit en String ou null
   String? _toStringNullable(dynamic value) {
     if (value == null) return null;
     if (value is String && value.isEmpty) return null;
@@ -208,7 +245,6 @@ class GoogleSheetsService {
   }
 }
 
-// ✅ ImportResult mis à jour avec duration
 class ImportResult {
   final int successCount;
   final int errorCount;

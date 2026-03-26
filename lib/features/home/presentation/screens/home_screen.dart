@@ -5,6 +5,8 @@ import 'package:inventory_manager/domain/entities/inventory.dart';
 import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';
 import 'package:inventory_manager/features/inventory/presentation/screens/inventory_detail_screen.dart';
 import 'package:inventory_manager/features/inventory/presentation/screens/inventory_items_screen.dart';
+import 'package:inventory_manager/features/import_export/data/services/export_service.dart';
+import 'package:inventory_manager/data/datasources/local/database.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
 
@@ -63,9 +65,11 @@ class _InventoriesList extends StatelessWidget {
                 final inventory = state.inventories[index];
                 return _InventoryCard(
                   inventory: inventory,
-                  // ✅ CORRIGÉ : Passe l'inventaire à la méthode de navigation
                   onTap: () => _navigateToItemsList(context, inventory),
                   onDelete: () => _confirmDelete(context, inventory),
+                  // ✅ AJOUT : Passer l'inventaire pour export et rename
+                  onExport: () => _exportInventory(context, inventory),
+                  onRename: () => _showRenameDialog(context, inventory),
                 );
               },
             ),
@@ -77,14 +81,13 @@ class _InventoriesList extends StatelessWidget {
     );
   }
 
-  // ✅ CORRIGÉ : Accepte l'inventaire en paramètre
   void _navigateToItemsList(BuildContext context, Inventory inventory) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => InventoryItemsScreen(
-          inventoryId: inventory.id,      // ✅ Utilise inventory passé en paramètre
-          inventoryName: inventory.name, // ✅ Utilise inventory passé en paramètre
+          inventoryId: inventory.id,
+          inventoryName: inventory.name,
         ),
       ),
     );
@@ -130,17 +133,128 @@ class _InventoriesList extends StatelessWidget {
       ),
     );
   }
+
+  // ✅ NOUVEAU : Export Excel d'un inventaire
+  Future<void> _exportInventory(BuildContext context, Inventory inventory) async {
+    try {
+      final database = AppDatabase();
+      final exportService = ExportService(database);
+      
+      // Feedback visuel
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export de "${inventory.name}" en cours...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+      
+      final filePath = await exportService.exportToExcel(
+        inventory.id,
+        inventory.name,
+      );
+      
+      await exportService.shareFile(filePath);
+      
+      if (!context.mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ "${inventory.name}" exporté avec succès'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Erreur export: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // ✅ NOUVEAU : Dialogue de renommage
+  void _showRenameDialog(BuildContext context, Inventory inventory) {
+    final nameController = TextEditingController(text: inventory.name);
+    final descController = TextEditingController(text: inventory.description ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Renommer l\'inventaire'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Nom *',
+                hintText: 'Nouveau nom',
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                hintText: 'Nouvelle description (optionnel)',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final newName = nameController.text.trim();
+              if (newName.isNotEmpty) {
+                context.read<HomeBloc>().add(
+                  UpdateInventoryEvent(
+                    inventoryId: inventory.id,
+                    name: newName,
+                    description: descController.text.trim().isEmpty 
+                        ? null 
+                        : descController.text.trim(),
+                  ),
+                );
+                Navigator.pop(dialogContext);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Inventaire renommé en "$newName"'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _InventoryCard extends StatelessWidget {
   final Inventory inventory;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  // ✅ AJOUT : Nouveaux callbacks
+  final VoidCallback onExport;
+  final VoidCallback onRename;
 
   const _InventoryCard({
     required this.inventory,
     required this.onTap,
     required this.onDelete,
+    required this.onExport,
+    required this.onRename,
   });
 
   @override
@@ -192,16 +306,17 @@ class _InventoryCard extends StatelessWidget {
                 ),
               ),
               PopupMenuButton<String>(
+                // ✅ COMPLÉTÉ : Gestion de toutes les actions
                 onSelected: (value) {
                   switch (value) {
                     case 'delete':
                       onDelete();
                       break;
                     case 'export':
-                      // TODO: Export
+                      onExport(); // ✅ Appel du callback export
                       break;
                     case 'rename':
-                      // TODO: Rename
+                      onRename(); // ✅ Appel du callback rename
                       break;
                   }
                 },
