@@ -63,7 +63,8 @@ class _InventoriesList extends StatelessWidget {
                 final inventory = state.inventories[index];
                 return _InventoryCard(
                   inventory: inventory,
-                  onTap: () => _navigateToItemsList(context),
+                  // ✅ CORRIGÉ : Passe l'inventaire à la méthode de navigation
+                  onTap: () => _navigateToItemsList(context, inventory),
                   onDelete: () => _confirmDelete(context, inventory),
                 );
               },
@@ -76,18 +77,18 @@ class _InventoriesList extends StatelessWidget {
     );
   }
 
-  // Naviguer vers la liste des articles
-  void _navigateToItemsList(BuildContext context) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => InventoryItemsScreen(
-        inventoryId: _currentInventory.id,
-        inventoryName: _currentInventory.name,
+  // ✅ CORRIGÉ : Accepte l'inventaire en paramètre
+  void _navigateToItemsList(BuildContext context, Inventory inventory) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => InventoryItemsScreen(
+          inventoryId: inventory.id,      // ✅ Utilise inventory passé en paramètre
+          inventoryName: inventory.name, // ✅ Utilise inventory passé en paramètre
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _confirmDelete(BuildContext context, Inventory inventory) {
     showDialog(
