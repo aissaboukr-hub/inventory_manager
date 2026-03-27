@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:inventory_manager/config/routes.dart';
 import 'package:inventory_manager/domain/entities/inventory.dart';
-// ✅ CORRECTION : Import explicite du bloc ET des événements
+// ✅ CORRECTION : Import unique avec tous les éléments nécessaires
 import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';
-import 'package:inventory_manager/features/home/presentation/bloc/home_event.dart';
 import 'package:inventory_manager/features/inventory/presentation/screens/inventory_items_screen.dart';
 import 'package:inventory_manager/features/import_export/data/services/export_service.dart';
 import 'package:inventory_manager/data/datasources/local/database.dart' as db;
@@ -35,9 +34,15 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _InventoriesList extends StatelessWidget {
+// ✅ CORRECTION : StatefulWidget pour accéder au context correctement
+class _InventoriesList extends StatefulWidget {
   const _InventoriesList();
 
+  @override
+  State<_InventoriesList> createState() => _InventoriesListState();
+}
+
+class _InventoriesListState extends State<_InventoriesList> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<HomeBloc, HomeState>(
@@ -153,7 +158,7 @@ class _InventoriesList extends StatelessWidget {
       
       await exportService.shareFile(filePath);
       
-      if (!context.mounted) return;
+      if (!mounted) return;
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -162,7 +167,7 @@ class _InventoriesList extends StatelessWidget {
         ),
       );
     } catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('❌ Erreur export: $e'),

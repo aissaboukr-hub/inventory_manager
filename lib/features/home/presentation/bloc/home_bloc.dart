@@ -12,6 +12,13 @@ import 'package:inventory_manager/data/datasources/local/database.dart' as db;
 import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
 
+part 'home_event.dart';
+part 'home_state.dart';
+
+// ✅ Export public pour les imports
+export 'home_event.dart';
+export 'home_state.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
