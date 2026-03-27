@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:inventory_manager/config/routes.dart';
 import 'package:inventory_manager/domain/entities/inventory.dart';
+// ✅ CORRECTION : Import explicite du bloc ET des événements
 import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';
-import 'package:inventory_manager/features/inventory/presentation/screens/inventory_detail_screen.dart';
+import 'package:inventory_manager/features/home/presentation/bloc/home_event.dart';
 import 'package:inventory_manager/features/inventory/presentation/screens/inventory_items_screen.dart';
 import 'package:inventory_manager/features/import_export/data/services/export_service.dart';
-import 'package:inventory_manager/data/datasources/local/database.dart';
+import 'package:inventory_manager/data/datasources/local/database.dart' as db;
 import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
 
@@ -67,7 +68,6 @@ class _InventoriesList extends StatelessWidget {
                   inventory: inventory,
                   onTap: () => _navigateToItemsList(context, inventory),
                   onDelete: () => _confirmDelete(context, inventory),
-                  // ✅ AJOUT : Passer l'inventaire pour export et rename
                   onExport: () => _exportInventory(context, inventory),
                   onRename: () => _showRenameDialog(context, inventory),
                 );
@@ -134,13 +134,11 @@ class _InventoriesList extends StatelessWidget {
     );
   }
 
-  // ✅ NOUVEAU : Export Excel d'un inventaire
   Future<void> _exportInventory(BuildContext context, Inventory inventory) async {
     try {
-      final database = AppDatabase();
+      final database = db.AppDatabase();
       final exportService = ExportService(database);
       
-      // Feedback visuel
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Export de "${inventory.name}" en cours...'),
@@ -174,7 +172,6 @@ class _InventoriesList extends StatelessWidget {
     }
   }
 
-  // ✅ NOUVEAU : Dialogue de renommage
   void _showRenameDialog(BuildContext context, Inventory inventory) {
     final nameController = TextEditingController(text: inventory.name);
     final descController = TextEditingController(text: inventory.description ?? '');
@@ -245,7 +242,6 @@ class _InventoryCard extends StatelessWidget {
   final Inventory inventory;
   final VoidCallback onTap;
   final VoidCallback onDelete;
-  // ✅ AJOUT : Nouveaux callbacks
   final VoidCallback onExport;
   final VoidCallback onRename;
 
@@ -306,17 +302,16 @@ class _InventoryCard extends StatelessWidget {
                 ),
               ),
               PopupMenuButton<String>(
-                // ✅ COMPLÉTÉ : Gestion de toutes les actions
                 onSelected: (value) {
                   switch (value) {
                     case 'delete':
                       onDelete();
                       break;
                     case 'export':
-                      onExport(); // ✅ Appel du callback export
+                      onExport();
                       break;
                     case 'rename':
-                      onRename(); // ✅ Appel du callback rename
+                      onRename();
                       break;
                   }
                 },
