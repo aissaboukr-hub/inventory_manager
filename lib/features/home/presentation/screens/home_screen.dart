@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:inventory_manager/config/routes.dart';
 import 'package:inventory_manager/domain/entities/inventory.dart';
-// ✅ CORRECTION : Import unique avec tous les éléments nécessaires
-import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';
+// ✅ SOLUTION : Import avec alias pour éviter tout conflit
+import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart' as home_bloc;
 import 'package:inventory_manager/features/inventory/presentation/screens/inventory_items_screen.dart';
 import 'package:inventory_manager/features/import_export/data/services/export_service.dart';
 import 'package:inventory_manager/data/datasources/local/database.dart' as db;
@@ -34,7 +34,6 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// ✅ CORRECTION : StatefulWidget pour accéder au context correctement
 class _InventoriesList extends StatefulWidget {
   const _InventoriesList();
 
@@ -45,24 +44,26 @@ class _InventoriesList extends StatefulWidget {
 class _InventoriesListState extends State<_InventoriesList> {
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<HomeBloc, HomeState>(
+    // ✅ Utilisation avec alias home_bloc.
+    return BlocBuilder<home_bloc.HomeBloc, home_bloc.HomeState>(
       builder: (context, state) {
-        if (state is HomeLoading) {
+        if (state is home_bloc.HomeLoading) {
           return const _LoadingShimmer();
         }
 
-        if (state is HomeError) {
+        if (state is home_bloc.HomeError) {
           return _ErrorView(message: state.message);
         }
 
-        if (state is HomeLoaded) {
+        if (state is home_bloc.HomeLoaded) {
           if (state.inventories.isEmpty) {
             return const _EmptyState();
           }
 
           return RefreshIndicator(
             onRefresh: () async {
-              context.read<HomeBloc>().add(const RefreshInventoriesEvent());
+              // ✅ Utilisation avec alias
+              context.read<home_bloc.HomeBloc>().add(const home_bloc.RefreshInventoriesEvent());
             },
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -128,7 +129,8 @@ class _InventoriesListState extends State<_InventoriesList> {
           ),
           FilledButton(
             onPressed: () {
-              context.read<HomeBloc>().add(DeleteInventoryEvent(inventory.id));
+              // ✅ Utilisation avec alias
+              context.read<home_bloc.HomeBloc>().add(home_bloc.DeleteInventoryEvent(inventory.id));
               Navigator.pop(dialogContext);
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -216,8 +218,9 @@ class _InventoriesListState extends State<_InventoriesList> {
             onPressed: () {
               final newName = nameController.text.trim();
               if (newName.isNotEmpty) {
-                context.read<HomeBloc>().add(
-                  UpdateInventoryEvent(
+                // ✅ Utilisation avec alias
+                context.read<home_bloc.HomeBloc>().add(
+                  home_bloc.UpdateInventoryEvent(
                     inventoryId: inventory.id,
                     name: newName,
                     description: descController.text.trim().isEmpty 
@@ -411,8 +414,9 @@ class _AddInventoryFab extends StatelessWidget {
           FilledButton(
             onPressed: () {
               if (nameController.text.trim().isNotEmpty) {
-                context.read<HomeBloc>().add(
-                  CreateInventoryEvent(
+                // ✅ Utilisation avec alias
+                context.read<home_bloc.HomeBloc>().add(
+                  home_bloc.CreateInventoryEvent(
                     nameController.text.trim(),
                     description: descController.text.trim().isEmpty 
                         ? null 
@@ -531,7 +535,8 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: () {
-                context.read<HomeBloc>().add(const LoadInventoriesEvent());
+                // ✅ Utilisation avec alias
+                context.read<home_bloc.HomeBloc>().add(const home_bloc.LoadInventoriesEvent());
               },
               icon: const Icon(Icons.refresh),
               label: const Text('Réessayer'),
