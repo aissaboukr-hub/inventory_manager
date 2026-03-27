@@ -67,9 +67,39 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             icon: Icon(_torchEnabled ? Icons.flash_on : Icons.flash_off),
             onPressed: _toggleTorch,
           ),
-          IconButton(
-            icon: Icon(_isScanning ? Icons.pause : Icons.play_arrow),
-            onPressed: () => setState(() => _isScanning = !_isScanning),
+          // ✅ INDICATEUR VISUEL: État du scan
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: _isScanning 
+                  ? Colors.green.shade100 
+                  : Colors.orange.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _isScanning ? Icons.qr_code_scanner : Icons.pause_circle,
+                  size: 16,
+                  color: _isScanning 
+                      ? Colors.green.shade700 
+                      : Colors.orange.shade700,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _isScanning ? 'SCAN ON' : 'PAUSE',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _isScanning 
+                        ? Colors.green.shade700 
+                        : Colors.orange.shade700,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -108,16 +138,46 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             MobileScanner(
               controller: _cameraController!,
               onDetect: (capture) {
-                if (_isScanning && !_isProcessing) {
+                // ✅ VÉRIFICATION: Scan uniquement si actif ET pas de produit en cours
+                if (_isScanning && !_isProcessing && _scannedProduct == null) {
                   _onBarcodeDetected(capture);
                 }
               },
             ),
+            // ✅ OVERLAY VISUEL: Masque quand scan désactivé
+            if (!_isScanning || _scannedProduct != null)
+              Container(
+                color: Colors.black54,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.pause_circle_outline,
+                        size: 64,
+                        color: Colors.white70,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Scan en pause\nValidez ou annulez le produit en cours',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             Container(
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 2,
+                  color: _isScanning && _scannedProduct == null
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.orange,
+                  width: 3,
                 ),
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -126,14 +186,21 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                   width: 250,
                   height: 150,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(
+                      color: _isScanning && _scannedProduct == null
+                          ? Colors.white
+                          : Colors.orange.shade200,
+                      width: 2,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: Container(
                       width: 200,
                       height: 2,
-                      color: Colors.red.withOpacity(0.8),
+                      color: _isScanning && _scannedProduct == null
+                          ? Colors.red.withOpacity(0.8)
+                          : Colors.orange,
                     ),
                   ),
                 ),
@@ -354,18 +421,19 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     );
   }
 
-  // ✅ CORRIGÉ: Réinitialise toujours _isProcessing à false
+  // ✅ CORRIGÉ: Réactive le scan en remettant _isScanning à true
   void _resetScan() {
     setState(() {
       _scannedProduct = null;
       _lastBarcode = null;
-      _isProcessing = false; // ← AJOUTÉ: Débloque le scan
+      _isProcessing = false;
+      _isScanning = true; // ← RÉACTIVE LE SCAN
     });
     _searchController.clear();
     _quantityController.clear();
   }
 
-  // ✅ CORRIGÉ: Gestion robuste de _isProcessing avec finally
+  // ✅ CORRIGÉ: Met en pause le scan après détection réussie
   void _onBarcodeDetected(BarcodeCapture capture) async {
     if (_isProcessing) return;
     
@@ -384,14 +452,16 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
 
             if (!mounted) return;
             
-            setState(() {
-              if (product != null) {
+            if (product != null) {
+              setState(() {
                 _scannedProduct = product;
                 _quantityController.clear();
-              } else {
-                _showNewProductDialog(code);
-              }
-            });
+                _isScanning = false; // ← PAUSE AUTOMATIQUE: Empêche nouveau scan
+              });
+            } else {
+              // Pas de pause ici, le dialogue va s'ouvrir
+              _showNewProductDialog(code);
+            }
           } catch (e) {
             if (!mounted) return;
             _showError('Erreur lors de la recherche: $e');
@@ -403,7 +473,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
         },
       );
     } finally {
-      // ← AJOUTÉ: Garantit que _isProcessing est remis à false
       if (mounted) {
         setState(() => _isProcessing = false);
       }
@@ -411,6 +480,9 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
   }
 
   void _showNewProductDialog(String barcode) {
+    // ✅ PAUSE LE SCAN quand le dialogue s'ouvre
+    setState(() => _isScanning = false);
+    
     _newProductCodeController.text = '';
     _newProductNameController.text = '';
     _newProductCategoryController.text = '';
@@ -539,7 +611,10 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          setState(() => _isScanning = true); // ← RÉACTIVE SI ANNULÉ
+                        },
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -605,6 +680,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
       setState(() {
         _scannedProduct = newProduct;
         _isProcessing = false;
+        // Scan reste en pause (_isScanning = false) pour saisie quantité
       });
 
       _quantityController.clear();
@@ -643,6 +719,9 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
   }
 
   void _showProductSelectionSheet(List<Product> products) {
+    // ✅ PAUSE LE SCAN pendant la sélection
+    setState(() => _isScanning = false);
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -694,7 +773,10 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                         ),
                       ),
                       IconButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          setState(() => _isScanning = true); // ← RÉACTIVE SI FERMÉ
+                        },
                         icon: const Icon(Icons.close),
                       ),
                     ],
@@ -774,6 +856,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                             Navigator.pop(context);
                             setState(() {
                               _scannedProduct = product;
+                              // ← RESTE EN PAUSE pour saisie quantité
                             });
                             _quantityController.clear();
                           },
