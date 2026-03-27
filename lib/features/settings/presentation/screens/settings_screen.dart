@@ -617,142 +617,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ✅ VERSION OPTIMISÉE : Nettoyage rapide avec requête SQL unique
   Future<void> _performCleanupOptimized() async {
     setState(() {
-      _isLoading = true;
-      _loadingText = 'Analyse des données...';
+    _isLoading = true;
+    _loadingText = 'Suppression des données...';
+  });
+
+  final stopwatch = Stopwatch()..start();
+
+  try {
+    final database = AppDatabase();
+
+    await database.transaction(() async {
+      // 1️⃣ Supprimer les dépendances
+      await database.customUpdate('DELETE FROM inventory_items');
+
+      // 2️⃣ Supprimer les produits
+      final deleted = await database.customUpdate('DELETE FROM products');
+
+      print('Produits supprimés: $deleted');
     });
-    
-    final stopwatch = Stopwatch()..start();
-    
-    try {
-      final database = AppDatabase();
-      
-      // ✅ OPTIMISATION 1 : Requête SQL unique pour trouver les orphelins
-      // Utilise NOT EXISTS au lieu de charger tout en mémoire
-      final orphanProducts = await database.customSelect('''
-        SELECT p.id 
-        FROM products p
-        WHERE NOT EXISTS (
-          SELECT 1 FROM inventory_items ii 
-          WHERE ii.product_id = p.id
-        )
-      ''').get();
 
-      final orphanCount = orphanProducts.length;
-      
-      if (orphanCount == 0) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ℹ️ Aucun produit orphelin à supprimer'),
-            backgroundColor: Colors.blue,
-          ),
-        );
-        return;
-      }
+    stopwatch.stop();
 
-      setState(() => _loadingText = 'Suppression de $orphanCount produits...');
+    if (!mounted) return;
 
-      // ✅ OPTIMISATION 2 : Suppression par batch avec IN clause
-      const batchSize = 500;
-      int deletedCount = 0;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('🧹 Tous les produits supprimés en ${stopwatch.elapsed.inSeconds}s'),
+        backgroundColor: Colors.orange,
+      ),
+    );
 
-      await database.transaction(() async {
-        for (var i = 0; i < orphanProducts.length; i += batchSize) {
-          final batch = orphanProducts.skip(i).take(batchSize).toList();
-          final ids = batch.map((row) => row.read<int>('id')).toList();
-          
-          // Suppression en une seule requête par batch
-          final deleted = await database.customUpdate(
-            'DELETE FROM products WHERE id IN (${ids.join(',')})',
-            updates: {database.products},
-          );
-          
-          deletedCount += deleted;
-          
-          // Mise à jour de la progression
-          if (i % (batchSize * 2) == 0) {
-            setState(() {
-              _loadingText = 'Suppression ${(i + batch.length).clamp(0, orphanCount)} / $orphanCount...';
-            });
-          }
-        }
-      });
+    _loadStats();
 
-      stopwatch.stop();
+  } catch (e) {
+    if (!mounted) return;
 
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('🧹 $deletedCount produit(s) supprimé(s) en ${stopwatch.elapsed.inSeconds}s'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      
-      _loadStats();
-      
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Erreur: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('❌ Erreur: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() => _isLoading = false);
   }
-
-  // ✅ Ancienne méthode conservée pour référence (lente)
-  Future<void> _performCleanupOld() async {
-    setState(() {
-      _isLoading = true;
-      _loadingText = 'Nettoyage...';
-    });
-    
-    try {
-      final database = AppDatabase();
-      
-      // LENT : Charge tout en mémoire
-      final allProducts = await database.select(database.products).get();
-      final inventoryItems = await database.select(database.inventoryItems).get();
-      
-      final usedProductIds = inventoryItems.map((item) => item.productId).toSet();
-      
-      int deletedCount = 0;
-      
-      // LENT : Suppression une par une
-      for (final product in allProducts) {
-        if (!usedProductIds.contains(product.id)) {
-          await database.delete(database.products).delete(product);
-          deletedCount++;
-        }
-      }
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('🧹 $deletedCount produit(s) orphelin(s) supprimé(s)'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      
-      _loadStats();
-      
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Erreur: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
+}
 
   void _showHelp() {
     showDialog(
