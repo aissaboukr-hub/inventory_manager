@@ -27,6 +27,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
   final TextEditingController _newProductCodeController = TextEditingController();
   final TextEditingController _newProductNameController = TextEditingController();
   final TextEditingController _newProductCategoryController = TextEditingController();
+  final TextEditingController _quantityController = TextEditingController();
 
   MobileScannerController? _cameraController;
   bool _isScanning = true;
@@ -35,7 +36,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
   bool _isNewProduct = false;
   String? _lastBarcode;
   bool _isProcessing = false;
-  double _quantity = 1.0;
 
   @override
   void initState() {
@@ -55,6 +55,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     _newProductCodeController.dispose();
     _newProductNameController.dispose();
     _newProductCategoryController.dispose();
+    _quantityController.dispose();
     super.dispose();
   }
 
@@ -266,7 +267,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          // Section quantité optimisée mobile
+          // Section quantité optimisée mobile - saisie libre
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -282,80 +283,44 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                       ),
                 ),
                 const SizedBox(height: 16),
-                // Affichage de la quantité avec contrôles +/- et saisie directe
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildQuantityButton(
-                      icon: Icons.remove,
-                      onPressed: () => _updateQuantity(-1),
-                    ),
-                    const SizedBox(width: 16),
-                    // Champ de saisie numérique optimisé mobile
-                    Expanded(
-                      child: TextField(
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                          signed: false,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                        ],
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          hintText: '0',
-                        ),
-                        controller: TextEditingController(
-                          text: _quantity == _quantity.toInt()
-                              ? _quantity.toInt().toString()
-                              : _quantity.toStringAsFixed(2),
-                        ),
-                        onChanged: (value) {
-                          final parsed = double.tryParse(value);
-                          if (parsed != null && parsed >= 0) {
-                            setState(() => _quantity = parsed);
-                          }
-                        },
+                // Champ de saisie numérique simple avec valeur initiale vide
+                TextField(
+                  controller: _quantityController,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    _buildQuantityButton(
-                      icon: Icons.add,
-                      onPressed: () => _updateQuantity(1),
-                    ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: true, // Permet les nombres négatifs
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*')),
                   ],
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                    hintText: '0',
+                    hintStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                // Boutons de raccourcis rapides
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [0.5, 1, 2, 5, 10].map((value) {
-                    return ActionChip(
-                      label: Text(
-                        value == value.toInt()
-                            ? '+${value.toInt()}'
-                            : '+$value',
+                const SizedBox(height: 8),
+                Text(
+                  'Saisissez une valeur positive ou négative',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                      onPressed: () => setState(() => _quantity += value),
-                      backgroundColor: Theme.of(context).colorScheme.surface,
-                    );
-                  }).toList(),
                 ),
               ],
             ),
@@ -396,43 +361,14 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     );
   }
 
-  Widget _buildQuantityButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-  }) {
-    return Material(
-      color: Theme.of(context).colorScheme.primary,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 28,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _updateQuantity(double delta) {
-    setState(() {
-      final newValue = _quantity + delta;
-      _quantity = newValue < 0 ? 0 : newValue;
-    });
-  }
-
   void _resetScan() {
     setState(() {
       _scannedProduct = null;
       _isNewProduct = false;
       _lastBarcode = null;
-      _quantity = 1.0;
     });
     _searchController.clear();
+    _quantityController.clear();
   }
 
   void _onBarcodeDetected(BarcodeCapture capture) async {
@@ -464,12 +400,12 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
         setState(() {
           _scannedProduct = product;
           _isNewProduct = false;
-          _quantity = 1.0;
           _isProcessing = false;
         });
+        // Réinitialise le champ quantité à vide
+        _quantityController.clear();
       } else {
         setState(() => _isProcessing = false);
-        // Afficher le dialogue de création de produit
         _showNewProductDialog(code);
       }
     } catch (e) {
@@ -479,7 +415,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
   }
 
   void _showNewProductDialog(String barcode) {
-    // Pré-remplir le code si c'est un code produit
     _newProductCodeController.text = '';
     _newProductNameController.text = '';
     _newProductCategoryController.text = '';
@@ -499,7 +434,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // En-tête avec icône
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -554,7 +488,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Champs du formulaire
                 TextField(
                   controller: _newProductCodeController,
                   decoration: InputDecoration(
@@ -606,7 +539,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                       ),
                 ),
                 const SizedBox(height: 24),
-                // Boutons d'action
                 Row(
                   children: [
                     Expanded(
@@ -660,7 +592,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
 
     try {
       setState(() => _isProcessing = true);
-      Navigator.pop(context); // Ferme le dialogue
+      Navigator.pop(context);
 
       final newProduct = await context
           .read<InventoryRepository>()
@@ -669,15 +601,16 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             designation: name,
             barcode: barcode,
             category: category.isNotEmpty ? category : null,
-            unit: 'unité', // Valeur par défaut, peut être modifiée
+            unit: 'unité',
           );
 
       setState(() {
         _scannedProduct = newProduct;
         _isNewProduct = false;
-        _quantity = 1.0;
         _isProcessing = false;
       });
+
+      _quantityController.clear();
 
       _showSuccess('Produit créé avec succès');
     } catch (e) {
@@ -694,14 +627,13 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     try {
       final products = await context
           .read<InventoryRepository>()
-          .searchProducts(query, limit: 100); // Augmenté pour liste complète
+          .searchProducts(query, limit: 100);
 
       setState(() => _isProcessing = false);
 
       if (products.isEmpty) {
         _showNewProductDialog(query);
       } else {
-        // Afficher tous les résultats dans un bottom sheet plein écran
         _showProductSelectionSheet(products);
       }
     } catch (e) {
@@ -729,7 +661,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             ),
             child: Column(
               children: [
-                // Poignée de drag
                 Container(
                   margin: const EdgeInsets.only(top: 12),
                   width: 40,
@@ -739,7 +670,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                // En-tête
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Row(
@@ -771,7 +701,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                   ),
                 ),
                 Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
-                // Liste complète des produits
                 Expanded(
                   child: ListView.builder(
                     controller: scrollController,
@@ -846,8 +775,8 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                             setState(() {
                               _scannedProduct = product;
                               _isNewProduct = false;
-                              _quantity = 1.0;
                             });
+                            _quantityController.clear();
                           },
                         ),
                       );
@@ -868,8 +797,20 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
       return;
     }
 
-    if (_quantity <= 0) {
+    final quantityText = _quantityController.text.trim();
+    if (quantityText.isEmpty) {
+      _showError('Veuillez entrer une quantité');
+      return;
+    }
+
+    final quantity = double.tryParse(quantityText);
+    if (quantity == null) {
       _showError('Veuillez entrer une quantité valide');
+      return;
+    }
+
+    if (quantity == 0) {
+      _showError('La quantité ne peut pas être zéro');
       return;
     }
 
@@ -881,13 +822,14 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
           .addInventoryItem(
             inventoryId: widget.inventoryId,
             productId: _scannedProduct!.id!,
-            quantity: _quantity,
+            quantity: quantity,
           );
 
-      _showSuccess('Article ajouté: ${_quantity > 0 ? '+' : ''}$_quantity');
+      final sign = quantity > 0 ? '+' : '';
+      _showSuccess('Article ajouté: $sign$quantity');
 
       if (widget.onProductScanned != null) {
-        widget.onProductScanned!(_scannedProduct!, _quantity);
+        widget.onProductScanned!(_scannedProduct!, quantity);
       }
 
       Navigator.pop(context, newItem);
