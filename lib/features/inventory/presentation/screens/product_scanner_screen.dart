@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:inventory_manager/core/utils/barcode_scanner.dart';
-import 'package:inventory_manager/core/utils/sound_player.dart';
 import 'package:inventory_manager/domain/entities/product.dart';
 import 'package:inventory_manager/domain/repositories/inventory_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -33,7 +32,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
   bool _isScanning = true;
   bool _torchEnabled = false;
   Product? _scannedProduct;
-  bool _isNewProduct = false;
   String? _lastBarcode;
   bool _isProcessing = false;
 
@@ -183,7 +181,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                   _searchController.clear();
                   setState(() {
                     _scannedProduct = null;
-                    _isNewProduct = false;
                   });
                 },
               ),
@@ -222,7 +219,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Carte produit
           Card(
             color: Theme.of(context).colorScheme.primaryContainer,
             elevation: 2,
@@ -267,7 +263,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          // Section quantité optimisée mobile - saisie libre
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -283,7 +278,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                       ),
                 ),
                 const SizedBox(height: 16),
-                // Champ de saisie numérique simple avec valeur initiale vide
                 TextField(
                   controller: _quantityController,
                   textAlign: TextAlign.center,
@@ -293,7 +287,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                       ),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
-                    signed: true, // Permet les nombres négatifs
+                    signed: true,
                   ),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*')),
@@ -326,7 +320,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          // Boutons d'action
           Row(
             children: [
               Expanded(
@@ -364,54 +357,45 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
   void _resetScan() {
     setState(() {
       _scannedProduct = null;
-      _isNewProduct = false;
       _lastBarcode = null;
     });
     _searchController.clear();
     _quantityController.clear();
   }
 
+  // ✅ UTILISATION COMPLÈTE DU SERVICE - Option 1
   void _onBarcodeDetected(BarcodeCapture capture) async {
-    if (_isProcessing) return;
-
     setState(() => _isProcessing = true);
 
-    final List<Barcode> barcodes = capture.barcodes;
-    if (barcodes.isEmpty) {
-      setState(() => _isProcessing = false);
-      return;
-    }
+    await _scannerService.handleBarcode(
+      capture,
+      onBarcode: (code) async {
+        _lastBarcode = code;
+        
+        try {
+          final product = await context
+              .read<InventoryRepository>()
+              .getProductByBarcode(code);
 
-    final String? code = barcodes.first.rawValue;
-    if (code == null || code.isEmpty) {
-      setState(() => _isProcessing = false);
-      return;
-    }
-
-    try {
-      await _scannerService.playBeep();
-      _lastBarcode = code;
-
-      final product = await context
-          .read<InventoryRepository>()
-          .getProductByBarcode(code);
-
-      if (product != null) {
-        setState(() {
-          _scannedProduct = product;
-          _isNewProduct = false;
-          _isProcessing = false;
-        });
-        // Réinitialise le champ quantité à vide
-        _quantityController.clear();
-      } else {
+          setState(() {
+            if (product != null) {
+              _scannedProduct = product;
+              _quantityController.clear();
+            } else {
+              _showNewProductDialog(code);
+            }
+            _isProcessing = false;
+          });
+        } catch (e) {
+          setState(() => _isProcessing = false);
+          _showError('Erreur lors de la recherche: $e');
+        }
+      },
+      onError: (error) {
         setState(() => _isProcessing = false);
-        _showNewProductDialog(code);
-      }
-    } catch (e) {
-      setState(() => _isProcessing = false);
-      _showError('Erreur lors de la recherche: $e');
-    }
+        _showError(error);
+      },
+    );
   }
 
   void _showNewProductDialog(String barcode) {
@@ -606,7 +590,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
 
       setState(() {
         _scannedProduct = newProduct;
-        _isNewProduct = false;
         _isProcessing = false;
       });
 
@@ -774,7 +757,6 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
                             Navigator.pop(context);
                             setState(() {
                               _scannedProduct = product;
-                              _isNewProduct = false;
                             });
                             _quantityController.clear();
                           },

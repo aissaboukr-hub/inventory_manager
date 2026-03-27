@@ -3,23 +3,37 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'sound_player.dart';
 
 class BarcodeScannerService {
-  final SoundPlayer _soundPlayer = SoundPlayer();
+  final SoundPlayer? _externalSoundPlayer;
+  late final SoundPlayer _internalSoundPlayer;
   final StreamController<String> _barcodeController = 
       StreamController<String>.broadcast();
   
   bool _isProcessing = false;
   DateTime _lastScanTime = DateTime.now();
 
+  BarcodeScannerService({SoundPlayer? soundPlayer}) 
+      : _externalSoundPlayer = soundPlayer {
+    _internalSoundPlayer = soundPlayer ?? SoundPlayer();
+  }
+  
+  SoundPlayer get _soundPlayer => _externalSoundPlayer ?? _internalSoundPlayer;
+
   Stream<String> get barcodeStream => _barcodeController.stream;
 
-  void handleBarcode(
+  StreamSubscription<String> listen(
+    void Function(String barcode) onBarcode, {
+    void Function(Object error)? onError,
+  }) {
+    return _barcodeController.stream.listen(onBarcode, onError: onError);
+  }
+
+  Future<void> handleBarcode(
     BarcodeCapture capture, {
     required Function(String barcode) onBarcode,
     required Function(String error) onError,
   }) async {
     if (_isProcessing) return;
     
-    // Debounce check
     final now = DateTime.now();
     if (now.difference(_lastScanTime).inMilliseconds < 1500) return;
     
@@ -29,39 +43,36 @@ class BarcodeScannerService {
     final String? code = barcodes.first.rawValue;
     if (code == null || code.isEmpty) return;
 
+    final trimmedCode = code.trim();
     _isProcessing = true;
     _lastScanTime = now;
 
     try {
-      // Validation du format code-barres
-      if (_isValidBarcode(code)) {
+      if (_isValidBarcode(trimmedCode)) {
         await _soundPlayer.playBeep();
-        _barcodeController.add(code);
-        onBarcode(code);
+        _barcodeController.add(trimmedCode);
+        onBarcode(trimmedCode);
       } else {
-        throw Exception('Format code-barres invalide');
+        throw Exception('Format code-barres invalide: $trimmedCode');
       }
     } catch (e) {
       await _soundPlayer.playError();
-      onError(e.toString());
+      final errorMsg = e is Exception ? e.toString() : 'Erreur scan: ${e.runtimeType}';
+      onError(errorMsg);
     } finally {
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(milliseconds: 800));
       _isProcessing = false;
     }
   }
 
-  // ← AJOUTÉ: Méthode publique pour jouer le beep
-  Future<void> playBeep() async {
-    await _soundPlayer.playBeep();
-  }
-
-  // ← AJOUTÉ: Méthode publique pour jouer l'erreur
-  Future<void> playError() async {
-    await _soundPlayer.playError();
-  }
+  Future<void> playBeep() => _soundPlayer.playBeep();
+  
+  Future<void> playError() => _soundPlayer.playError();
 
   bool _isValidBarcode(String code) {
-    // EAN-8, EAN-13, UPC-A, Code 128, Code 39
+    if (code.isEmpty) return false;
+    if (code.length < 4 || code.length > 50) return false;
+    
     final validPatterns = [
       RegExp(r'^\d{8}$'),      // EAN-8
       RegExp(r'^\d{13}$'),     // EAN-13
@@ -69,12 +80,13 @@ class BarcodeScannerService {
       RegExp(r'^[A-Z0-9\-\.\$\/\+\%\s]+$'), // Code 128/39
     ];
     
-    return validPatterns.any((pattern) => pattern.hasMatch(code)) || 
-           code.length >= 4;
+    return validPatterns.any((pattern) => pattern.hasMatch(code));
   }
 
   void dispose() {
-    _soundPlayer.dispose();
+    if (_externalSoundPlayer == null) {
+      _internalSoundPlayer.dispose();
+    }
     _barcodeController.close();
   }
 }
