@@ -130,6 +130,77 @@ class _InventoriesList extends StatelessWidget {
       ),
     );
   }
+
+  // Modifier l'inventaire
+  void _showEditDialog(BuildContext context) {
+    final nameController = TextEditingController(text: _currentInventory.name);
+    final descController = TextEditingController(text: _currentInventory.description ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Modifier l\'inventaire'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Nom *',
+                hintText: 'Nom de l\'inventaire',
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                hintText: 'Optionnel',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (nameController.text.trim().isNotEmpty) {
+                // Envoi au BLoC
+                context.read<HomeBloc>().add(
+                  UpdateInventoryEvent(
+                    inventoryId: _currentInventory.id,
+                    name: nameController.text.trim(),
+                    description: descController.text.trim().isEmpty 
+                        ? null 
+                        : descController.text.trim(),
+                  ),
+                );
+                // Mise à jour locale immédiate
+                setState(() {
+                  _currentInventory = _currentInventory.copyWith(
+                    name: nameController.text.trim(),
+                    description: descController.text.trim().isEmpty 
+                        ? null 
+                        : descController.text.trim(),
+                  );
+                });
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Inventaire mis à jour')),
+                );
+              }
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _InventoryCard extends StatelessWidget {
@@ -202,6 +273,7 @@ class _InventoryCard extends StatelessWidget {
                       break;
                     case 'rename':
                       // TODO: Rename
+		      _showEditDialog(context);
                       break;
                   }
                 },
