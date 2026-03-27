@@ -9,12 +9,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ProductScannerScreen extends StatefulWidget {
   final int inventoryId;
-  final Function(Product, double)? onProductScanned; // ← AJOUTÉ : Callback optionnel
+  final Function(Product, double)? onProductScanned;
 
   const ProductScannerScreen({
-    super.key, 
+    super.key,
     required this.inventoryId,
-    this.onProductScanned, // ← AJOUTÉ
+    this.onProductScanned,
   });
 
   @override
@@ -23,9 +23,11 @@ class ProductScannerScreen extends StatefulWidget {
 
 class _ProductScannerScreenState extends State<ProductScannerScreen> {
   final BarcodeScannerService _scannerService = BarcodeScannerService();
-  final TextEditingController _quantityController = TextEditingController(text: '1');
   final TextEditingController _searchController = TextEditingController();
-  
+  final TextEditingController _newProductCodeController = TextEditingController();
+  final TextEditingController _newProductNameController = TextEditingController();
+  final TextEditingController _newProductCategoryController = TextEditingController();
+
   MobileScannerController? _cameraController;
   bool _isScanning = true;
   bool _torchEnabled = false;
@@ -33,6 +35,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
   bool _isNewProduct = false;
   String? _lastBarcode;
   bool _isProcessing = false;
+  double _quantity = 1.0;
 
   @override
   void initState() {
@@ -48,8 +51,10 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
   void dispose() {
     _scannerService.dispose();
     _cameraController?.dispose();
-    _quantityController.dispose();
     _searchController.dispose();
+    _newProductCodeController.dispose();
+    _newProductNameController.dispose();
+    _newProductCategoryController.dispose();
     super.dispose();
   }
 
@@ -184,43 +189,200 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             ),
             onSubmitted: _searchProduct,
           ),
-          
           const SizedBox(height: 16),
-          
           Expanded(
-            child: _isNewProduct 
-                ? _buildNewProductForm() 
-                : _buildProductInfo(),
+            child: _scannedProduct != null
+                ? _buildProductWithQuantity()
+                : _buildEmptyState(),
           ),
-          
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.qr_code_scanner, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          
+          Text(
+            'Scannez un code-barres\nou recherchez un produit',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductWithQuantity() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Carte produit
+          Card(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Chip(
+                        label: Text(_scannedProduct!.code),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        labelStyle: const TextStyle(color: Colors.white),
+                      ),
+                      if (_scannedProduct!.barcode != null)
+                        Text(
+                          'EAN: ${_scannedProduct!.barcode}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _scannedProduct!.designation,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  if (_scannedProduct!.category != null) ...[
+                    const SizedBox(height: 8),
+                    Text('Catégorie: ${_scannedProduct!.category}'),
+                  ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Unité: ${_scannedProduct!.unit}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Section quantité optimisée mobile
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Quantité',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                // Affichage de la quantité avec contrôles +/- et saisie directe
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildQuantityButton(
+                      icon: Icons.remove,
+                      onPressed: () => _updateQuantity(-1),
+                    ),
+                    const SizedBox(width: 16),
+                    // Champ de saisie numérique optimisé mobile
+                    Expanded(
+                      child: TextField(
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: false,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                        ],
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Theme.of(context).colorScheme.surface,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          hintText: '0',
+                        ),
+                        controller: TextEditingController(
+                          text: _quantity == _quantity.toInt()
+                              ? _quantity.toInt().toString()
+                              : _quantity.toStringAsFixed(2),
+                        ),
+                        onChanged: (value) {
+                          final parsed = double.tryParse(value);
+                          if (parsed != null && parsed >= 0) {
+                            setState(() => _quantity = parsed);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    _buildQuantityButton(
+                      icon: Icons.add,
+                      onPressed: () => _updateQuantity(1),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Boutons de raccourcis rapides
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [0.5, 1, 2, 5, 10].map((value) {
+                    return ActionChip(
+                      label: Text(
+                        value == value.toInt()
+                            ? '+${value.toInt()}'
+                            : '+$value',
+                      ),
+                      onPressed: () => setState(() => _quantity += value),
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Boutons d'action
           Row(
             children: [
-              if (_isNewProduct) ...[
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _isNewProduct = false;
-                        _scannedProduct = null;
-                        _lastBarcode = null;
-                      });
-                    },
-                    icon: const Icon(Icons.cancel),
-                    label: const Text('Annuler'),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _resetScan,
+                  icon: const Icon(Icons.cancel),
+                  label: const Text('Annuler'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
-                const SizedBox(width: 12),
-              ],
+              ),
+              const SizedBox(width: 12),
               Expanded(
-                flex: _isNewProduct ? 1 : 2,
+                flex: 2,
                 child: FilledButton.icon(
                   onPressed: _validateEntry,
-                  icon: Icon(_isNewProduct ? Icons.add_circle : Icons.check_circle),
-                  label: Text(
-                    _isNewProduct ? 'Créer et ajouter' : 'Valider',
-                    style: const TextStyle(fontSize: 16),
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text(
+                    'Valider',
+                    style: TextStyle(fontSize: 16),
                   ),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -234,120 +396,48 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     );
   }
 
-  Widget _buildProductInfo() {
-    if (_scannedProduct == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.qr_code_scanner, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'Scannez un code-barres\nou recherchez un produit',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Card(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Chip(
-                  label: Text(_scannedProduct!.code),
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  labelStyle: const TextStyle(color: Colors.white),
-                ),
-                if (_scannedProduct!.barcode != null)
-                  Text(
-                    'EAN: ${_scannedProduct!.barcode}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _scannedProduct!.designation,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            if (_scannedProduct!.category != null) ...[
-              const SizedBox(height: 8),
-              Text('Catégorie: ${_scannedProduct!.category}'),
-            ],
-            const SizedBox(height: 8),
-            Text('Unité: ${_scannedProduct!.unit}', style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNewProductForm() {
-    return SingleChildScrollView(
-      child: Card(
-        color: Colors.orange.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Nouveau produit détecté',
-                    style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text('Code-barres: $_lastBarcode', style: const TextStyle(fontFamily: 'monospace')),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Code produit *',
-                  hintText: 'Ex: PROD-001',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Désignation *',
-                  hintText: 'Nom du produit',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Catégorie',
-                  hintText: 'Optionnel',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-            ],
+  Widget _buildQuantityButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Theme.of(context).colorScheme.primary,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 28,
           ),
         ),
       ),
     );
   }
 
+  void _updateQuantity(double delta) {
+    setState(() {
+      final newValue = _quantity + delta;
+      _quantity = newValue < 0 ? 0 : newValue;
+    });
+  }
+
+  void _resetScan() {
+    setState(() {
+      _scannedProduct = null;
+      _isNewProduct = false;
+      _lastBarcode = null;
+      _quantity = 1.0;
+    });
+    _searchController.clear();
+  }
+
   void _onBarcodeDetected(BarcodeCapture capture) async {
     if (_isProcessing) return;
-    
+
     setState(() => _isProcessing = true);
 
     final List<Barcode> barcodes = capture.barcodes;
@@ -364,24 +454,235 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
 
     try {
       await _scannerService.playBeep();
-
       _lastBarcode = code;
-      
-      final product = await context.read<InventoryRepository>().getProductByBarcode(code);
-      
-      setState(() {
-        if (product != null) {
+
+      final product = await context
+          .read<InventoryRepository>()
+          .getProductByBarcode(code);
+
+      if (product != null) {
+        setState(() {
           _scannedProduct = product;
           _isNewProduct = false;
-        } else {
-          _isNewProduct = true;
-          _scannedProduct = null;
-        }
-        _isProcessing = false;
-      });
+          _quantity = 1.0;
+          _isProcessing = false;
+        });
+      } else {
+        setState(() => _isProcessing = false);
+        // Afficher le dialogue de création de produit
+        _showNewProductDialog(code);
+      }
     } catch (e) {
       setState(() => _isProcessing = false);
       _showError('Erreur lors de la recherche: $e');
+    }
+  }
+
+  void _showNewProductDialog(String barcode) {
+    // Pré-remplir le code si c'est un code produit
+    _newProductCodeController.text = '';
+    _newProductNameController.text = '';
+    _newProductCategoryController.text = '';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // En-tête avec icône
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.add_circle_outline,
+                      size: 48,
+                      color: Colors.orange.shade700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Nouveau produit détecté',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.qr_code,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        barcode,
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Champs du formulaire
+                TextField(
+                  controller: _newProductCodeController,
+                  decoration: InputDecoration(
+                    labelText: 'Code produit *',
+                    hintText: 'Ex: PROD-001',
+                    prefixIcon: const Icon(Icons.tag),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _newProductNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Désignation *',
+                    hintText: 'Nom du produit',
+                    prefixIcon: const Icon(Icons.label_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _newProductCategoryController,
+                  decoration: InputDecoration(
+                    labelText: 'Catégorie',
+                    hintText: 'Optionnel',
+                    prefixIcon: const Icon(Icons.category_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '* Champs obligatoires',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 24),
+                // Boutons d'action
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Annuler'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton(
+                        onPressed: () => _createNewProduct(barcode),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Créer le produit',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _createNewProduct(String barcode) async {
+    final code = _newProductCodeController.text.trim();
+    final name = _newProductNameController.text.trim();
+    final category = _newProductCategoryController.text.trim();
+
+    if (code.isEmpty || name.isEmpty) {
+      _showError('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    try {
+      setState(() => _isProcessing = true);
+      Navigator.pop(context); // Ferme le dialogue
+
+      final newProduct = await context
+          .read<InventoryRepository>()
+          .createProduct(
+            code: code,
+            designation: name,
+            barcode: barcode,
+            category: category.isNotEmpty ? category : null,
+            unit: 'unité', // Valeur par défaut, peut être modifiée
+          );
+
+      setState(() {
+        _scannedProduct = newProduct;
+        _isNewProduct = false;
+        _quantity = 1.0;
+        _isProcessing = false;
+      });
+
+      _showSuccess('Produit créé avec succès');
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      _showError('Erreur lors de la création: $e');
     }
   }
 
@@ -391,102 +692,207 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      final products = await context.read<InventoryRepository>().searchProducts(query, limit: 10);
-      
+      final products = await context
+          .read<InventoryRepository>()
+          .searchProducts(query, limit: 100); // Augmenté pour liste complète
+
+      setState(() => _isProcessing = false);
+
       if (products.isEmpty) {
-        setState(() {
-          _isNewProduct = true;
-          _scannedProduct = null;
-          _lastBarcode = query;
-        });
-      } else if (products.length == 1) {
-        setState(() {
-          _scannedProduct = products.first;
-          _isNewProduct = false;
-        });
+        _showNewProductDialog(query);
       } else {
-        if (!mounted) return;
-        final selected = await showDialog<Product>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Sélectionner un produit'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: products.length,
-                itemBuilder: (context, index) {
-                  final p = products[index];
-                  return ListTile(
-                    title: Text(p.designation),
-                    subtitle: Text('${p.code} ${p.barcode != null ? '• EAN: ${p.barcode}' : ''}'),
-                    onTap: () => Navigator.pop(context, p),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-        
-        if (selected != null) {
-          setState(() {
-            _scannedProduct = selected;
-            _isNewProduct = false;
-          });
-        }
+        // Afficher tous les résultats dans un bottom sheet plein écran
+        _showProductSelectionSheet(products);
       }
     } catch (e) {
-      _showError('Erreur de recherche: $e');
-    } finally {
       setState(() => _isProcessing = false);
+      _showError('Erreur de recherche: $e');
     }
   }
 
-  void _updateQuantity(double delta) {
-    final current = double.tryParse(_quantityController.text) ?? 0;
-    final newValue = current + delta;
-    _quantityController.text = newValue == newValue.toInt() 
-        ? newValue.toInt().toString() 
-        : newValue.toStringAsFixed(2);
+  void _showProductSelectionSheet(List<Product> products) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+            child: Column(
+              children: [
+                // Poignée de drag
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // En-tête
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${products.length} résultat${products.length > 1 ? 's' : ''}',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            Text(
+                              'Tapez pour sélectionner',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
+                // Liste complète des produits
+                Expanded(
+                  child: ListView.builder(
+                    controller: scrollController,
+                    itemCount: products.length,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        elevation: 0,
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16),
+                          leading: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                product.designation.substring(0, 1).toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            product.designation,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(
+                                'Code: ${product.code}',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              if (product.barcode != null)
+                                Text(
+                                  'EAN: ${product.barcode}',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              if (product.category != null)
+                                Text(
+                                  'Catégorie: ${product.category}',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                            setState(() {
+                              _scannedProduct = product;
+                              _isNewProduct = false;
+                              _quantity = 1.0;
+                            });
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
-  // ✅ CORRIGÉ : Ajout du callback et retour à l'écran précédent
   void _validateEntry() async {
-    final quantity = double.tryParse(_quantityController.text);
-    if (quantity == null || quantity == 0) {
-      _showError('Veuillez entrer une quantité valide');
-      return;
-    }
-
-    if (_isNewProduct) {
-      _showError('Veuillez créer le produit d\'abord');
-      return;
-    }
-
     if (_scannedProduct == null) {
       _showError('Aucun produit sélectionné');
       return;
     }
 
+    if (_quantity <= 0) {
+      _showError('Veuillez entrer une quantité valide');
+      return;
+    }
+
     try {
-      // Ajouter l'article à l'inventaire
-      final newItem = await context.read<InventoryRepository>().addInventoryItem(
-        inventoryId: widget.inventoryId,
-        productId: _scannedProduct!.id!,
-        quantity: quantity,
-      );
+      setState(() => _isProcessing = true);
 
-      _showSuccess('Article ajouté: ${quantity > 0 ? '+' : ''}$quantity');
+      final newItem = await context
+          .read<InventoryRepository>()
+          .addInventoryItem(
+            inventoryId: widget.inventoryId,
+            productId: _scannedProduct!.id!,
+            quantity: _quantity,
+          );
 
-      // ✅ APPEL DU CALLBACK si défini
+      _showSuccess('Article ajouté: ${_quantity > 0 ? '+' : ''}$_quantity');
+
       if (widget.onProductScanned != null) {
-        widget.onProductScanned!(_scannedProduct!, quantity);
+        widget.onProductScanned!(_scannedProduct!, _quantity);
       }
 
-      // ✅ RETOURNER L'ITEM À L'ÉCRAN PRÉCÉDENT
       Navigator.pop(context, newItem);
-
     } catch (e) {
+      setState(() => _isProcessing = false);
       _showError('Erreur lors de l\'ajout: $e');
     }
   }
@@ -501,14 +907,26 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 3)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
   }
 
   void _showSuccess(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green, duration: const Duration(seconds: 2)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
   }
 }
