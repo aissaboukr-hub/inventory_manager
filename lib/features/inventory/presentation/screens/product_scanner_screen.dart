@@ -354,48 +354,60 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
     );
   }
 
+  // ✅ CORRIGÉ: Réinitialise toujours _isProcessing à false
   void _resetScan() {
     setState(() {
       _scannedProduct = null;
       _lastBarcode = null;
+      _isProcessing = false; // ← AJOUTÉ: Débloque le scan
     });
     _searchController.clear();
     _quantityController.clear();
   }
 
-  // ✅ UTILISATION COMPLÈTE DU SERVICE - Option 1
+  // ✅ CORRIGÉ: Gestion robuste de _isProcessing avec finally
   void _onBarcodeDetected(BarcodeCapture capture) async {
+    if (_isProcessing) return;
+    
     setState(() => _isProcessing = true);
 
-    await _scannerService.handleBarcode(
-      capture,
-      onBarcode: (code) async {
-        _lastBarcode = code;
-        
-        try {
-          final product = await context
-              .read<InventoryRepository>()
-              .getProductByBarcode(code);
+    try {
+      await _scannerService.handleBarcode(
+        capture,
+        onBarcode: (code) async {
+          _lastBarcode = code;
+          
+          try {
+            final product = await context
+                .read<InventoryRepository>()
+                .getProductByBarcode(code);
 
-          setState(() {
-            if (product != null) {
-              _scannedProduct = product;
-              _quantityController.clear();
-            } else {
-              _showNewProductDialog(code);
-            }
-            _isProcessing = false;
-          });
-        } catch (e) {
-          setState(() => _isProcessing = false);
-          _showError('Erreur lors de la recherche: $e');
-        }
-      },
-      onError: (error) {
+            if (!mounted) return;
+            
+            setState(() {
+              if (product != null) {
+                _scannedProduct = product;
+                _quantityController.clear();
+              } else {
+                _showNewProductDialog(code);
+              }
+            });
+          } catch (e) {
+            if (!mounted) return;
+            _showError('Erreur lors de la recherche: $e');
+          }
+        },
+        onError: (error) {
+          if (!mounted) return;
+          _showError(error);
+        },
+      );
+    } finally {
+      // ← AJOUTÉ: Garantit que _isProcessing est remis à false
+      if (mounted) {
         setState(() => _isProcessing = false);
-        _showError(error);
-      },
-    );
+      }
+    }
   }
 
   void _showNewProductDialog(String barcode) {
@@ -588,6 +600,8 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
             unit: 'unité',
           );
 
+      if (!mounted) return;
+      
       setState(() {
         _scannedProduct = newProduct;
         _isProcessing = false;
@@ -597,6 +611,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
 
       _showSuccess('Produit créé avec succès');
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isProcessing = false);
       _showError('Erreur lors de la création: $e');
     }
@@ -612,6 +627,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
           .read<InventoryRepository>()
           .searchProducts(query, limit: 100);
 
+      if (!mounted) return;
       setState(() => _isProcessing = false);
 
       if (products.isEmpty) {
@@ -620,6 +636,7 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
         _showProductSelectionSheet(products);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isProcessing = false);
       _showError('Erreur de recherche: $e');
     }
@@ -814,8 +831,10 @@ class _ProductScannerScreenState extends State<ProductScannerScreen> {
         widget.onProductScanned!(_scannedProduct!, quantity);
       }
 
+      if (!mounted) return;
       Navigator.pop(context, newItem);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isProcessing = false);
       _showError('Erreur lors de l\'ajout: $e');
     }
