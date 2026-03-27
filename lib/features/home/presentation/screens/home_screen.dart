@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:inventory_manager/config/routes.dart';
 import 'package:inventory_manager/domain/entities/inventory.dart';
-// ✅ SOLUTION : Import avec alias pour éviter tout conflit
-import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart' as home_bloc;
+import 'package:inventory_manager/features/home/presentation/bloc/home_bloc.dart';
+import 'package:inventory_manager/features/inventory/presentation/screens/inventory_detail_screen.dart';
 import 'package:inventory_manager/features/inventory/presentation/screens/inventory_items_screen.dart';
-import 'package:inventory_manager/features/import_export/data/services/export_service.dart';
-import 'package:inventory_manager/data/datasources/local/database.dart' as db;
 import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
 
@@ -34,36 +32,29 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _InventoriesList extends StatefulWidget {
+class _InventoriesList extends StatelessWidget {
   const _InventoriesList();
 
   @override
-  State<_InventoriesList> createState() => _InventoriesListState();
-}
-
-class _InventoriesListState extends State<_InventoriesList> {
-  @override
   Widget build(BuildContext context) {
-    // ✅ Utilisation avec alias home_bloc.
-    return BlocBuilder<home_bloc.HomeBloc, home_bloc.HomeState>(
+    return BlocBuilder<HomeBloc, HomeState>(
       builder: (context, state) {
-        if (state is home_bloc.HomeLoading) {
+        if (state is HomeLoading) {
           return const _LoadingShimmer();
         }
 
-        if (state is home_bloc.HomeError) {
+        if (state is HomeError) {
           return _ErrorView(message: state.message);
         }
 
-        if (state is home_bloc.HomeLoaded) {
+        if (state is HomeLoaded) {
           if (state.inventories.isEmpty) {
             return const _EmptyState();
           }
 
           return RefreshIndicator(
             onRefresh: () async {
-              // ✅ Utilisation avec alias
-              context.read<home_bloc.HomeBloc>().add(const home_bloc.RefreshInventoriesEvent());
+              context.read<HomeBloc>().add(const RefreshInventoriesEvent());
             },
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -72,10 +63,9 @@ class _InventoriesListState extends State<_InventoriesList> {
                 final inventory = state.inventories[index];
                 return _InventoryCard(
                   inventory: inventory,
+                  // ✅ CORRIGÉ : Passe l'inventaire à la méthode de navigation
                   onTap: () => _navigateToItemsList(context, inventory),
                   onDelete: () => _confirmDelete(context, inventory),
-                  onExport: () => _exportInventory(context, inventory),
-                  onRename: () => _showRenameDialog(context, inventory),
                 );
               },
             ),
@@ -87,13 +77,14 @@ class _InventoriesListState extends State<_InventoriesList> {
     );
   }
 
+  // ✅ CORRIGÉ : Accepte l'inventaire en paramètre
   void _navigateToItemsList(BuildContext context, Inventory inventory) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => InventoryItemsScreen(
-          inventoryId: inventory.id,
-          inventoryName: inventory.name,
+          inventoryId: inventory.id,      // ✅ Utilise inventory passé en paramètre
+          inventoryName: inventory.name, // ✅ Utilise inventory passé en paramètre
         ),
       ),
     );
@@ -129,116 +120,11 @@ class _InventoriesListState extends State<_InventoriesList> {
           ),
           FilledButton(
             onPressed: () {
-              // ✅ Utilisation avec alias
-              context.read<home_bloc.HomeBloc>().add(home_bloc.DeleteInventoryEvent(inventory.id));
+              context.read<HomeBloc>().add(DeleteInventoryEvent(inventory.id));
               Navigator.pop(dialogContext);
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Supprimer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _exportInventory(BuildContext context, Inventory inventory) async {
-    try {
-      final database = db.AppDatabase();
-      final exportService = ExportService(database);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Export de "${inventory.name}" en cours...'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-      
-      final filePath = await exportService.exportToExcel(
-        inventory.id,
-        inventory.name,
-      );
-      
-      await exportService.shareFile(filePath);
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ "${inventory.name}" exporté avec succès'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Erreur export: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _showRenameDialog(BuildContext context, Inventory inventory) {
-    final nameController = TextEditingController(text: inventory.name);
-    final descController = TextEditingController(text: inventory.description ?? '');
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Renommer l\'inventaire'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Nom *',
-                hintText: 'Nouveau nom',
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                hintText: 'Nouvelle description (optionnel)',
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final newName = nameController.text.trim();
-              if (newName.isNotEmpty) {
-                // ✅ Utilisation avec alias
-                context.read<home_bloc.HomeBloc>().add(
-                  home_bloc.UpdateInventoryEvent(
-                    inventoryId: inventory.id,
-                    name: newName,
-                    description: descController.text.trim().isEmpty 
-                        ? null 
-                        : descController.text.trim(),
-                  ),
-                );
-                Navigator.pop(dialogContext);
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Inventaire renommé en "$newName"'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            child: const Text('Enregistrer'),
           ),
         ],
       ),
@@ -250,15 +136,11 @@ class _InventoryCard extends StatelessWidget {
   final Inventory inventory;
   final VoidCallback onTap;
   final VoidCallback onDelete;
-  final VoidCallback onExport;
-  final VoidCallback onRename;
 
   const _InventoryCard({
     required this.inventory,
     required this.onTap,
     required this.onDelete,
-    required this.onExport,
-    required this.onRename,
   });
 
   @override
@@ -316,10 +198,10 @@ class _InventoryCard extends StatelessWidget {
                       onDelete();
                       break;
                     case 'export':
-                      onExport();
+                      // TODO: Export
                       break;
                     case 'rename':
-                      onRename();
+                      // TODO: Rename
                       break;
                   }
                 },
@@ -414,9 +296,8 @@ class _AddInventoryFab extends StatelessWidget {
           FilledButton(
             onPressed: () {
               if (nameController.text.trim().isNotEmpty) {
-                // ✅ Utilisation avec alias
-                context.read<home_bloc.HomeBloc>().add(
-                  home_bloc.CreateInventoryEvent(
+                context.read<HomeBloc>().add(
+                  CreateInventoryEvent(
                     nameController.text.trim(),
                     description: descController.text.trim().isEmpty 
                         ? null 
@@ -535,8 +416,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: () {
-                // ✅ Utilisation avec alias
-                context.read<home_bloc.HomeBloc>().add(const home_bloc.LoadInventoriesEvent());
+                context.read<HomeBloc>().add(const LoadInventoriesEvent());
               },
               icon: const Icon(Icons.refresh),
               label: const Text('Réessayer'),
