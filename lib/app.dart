@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart'; // ← AJOUTÉ pour PointerDeviceKind
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -48,9 +49,6 @@ class InventoryApp extends StatelessWidget {
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeMode.system,
 
-          // Material 3: Page transitions Material par défaut
-          // Pour Flutter 3.16+: Utilise MaterialPageTransitionsBuilder par défaut avec Material 3
-          
           // Material 3: Scroll behavior optimisé
           scrollBehavior: const MaterialScrollBehavior().copyWith(
             physics: const BouncingScrollPhysics(),

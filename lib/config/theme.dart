@@ -37,7 +37,7 @@ class AppTheme {
       // Material 3: Boutons
       elevatedButtonTheme: _buildElevatedButtonTheme(colorScheme),
       filledButtonTheme: _buildFilledButtonTheme(colorScheme),
-      filledButtonThemeData: _buildFilledButtonThemeData(colorScheme),
+      // SUPPRIMÉ: filledButtonThemeData n'existe pas dans ThemeData
       outlinedButtonTheme: _buildOutlinedButtonTheme(colorScheme),
       textButtonTheme: _buildTextButtonTheme(colorScheme),
 
@@ -162,7 +162,7 @@ class AppTheme {
       cardTheme: _buildCardTheme(colorScheme),
       elevatedButtonTheme: _buildElevatedButtonTheme(colorScheme),
       filledButtonTheme: _buildFilledButtonTheme(colorScheme),
-      filledButtonThemeData: _buildFilledButtonThemeData(colorScheme),
+      // SUPPRIMÉ: filledButtonThemeData n'existe pas dans ThemeData
       outlinedButtonTheme: _buildOutlinedButtonTheme(colorScheme),
       textButtonTheme: _buildTextButtonTheme(colorScheme),
       floatingActionButtonTheme: _buildFabTheme(),
@@ -334,22 +334,7 @@ class AppTheme {
     );
   }
 
-  static ButtonStyle _buildFilledButtonThemeData(ColorScheme colorScheme) {
-    return FilledButton.styleFrom(
-      backgroundColor: colorScheme.primary,
-      foregroundColor: colorScheme.onPrimary,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      minimumSize: const Size(64, 40),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(_radiusMedium),
-      ),
-      textStyle: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0.1,
-      ),
-    );
-  }
+  // SUPPRIMÉ: _buildFilledButtonThemeData n'est plus nécessaire
 
   static OutlinedButtonThemeData _buildOutlinedButtonTheme(ColorScheme colorScheme) {
     return OutlinedButtonThemeData(
