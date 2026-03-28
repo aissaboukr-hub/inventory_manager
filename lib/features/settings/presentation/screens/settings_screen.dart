@@ -264,310 +264,143 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _configureGoogleSheets() {
     final controller = TextEditingController(text: _googleScriptUrl ?? '');
 
-    import 'package:mobile_scanner/mobile_scanner.dart'; // Ajoute ce package
-
-showDialog(
-  context: context,
-  builder: (dialogContext) => AlertDialog(
-    title: const Row(
-      children: [
-        Icon(Icons.cloud, color: Colors.green),
-        SizedBox(width: 8),
-        Text('Google Sheets'),
-      ],
-    ),
-    content: SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 🆕 Champ URL avec bouton QR à droite
-          TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              labelText: 'URL du Script Google Apps',
-              hintText: 'https://script.google.com/macros/s/.../exec',
-              prefixIcon: const Icon(Icons.link),
-              // 🆕 Bouton scan QR
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.qr_code_scanner, color: Colors.green),
-                tooltip: 'Scanner un QR code',
-                onPressed: () async {
-                  // Ouvre le scanner QR
-                  final scannedUrl = await showDialog<String>(
-                    context: dialogContext,
-                    builder: (context) => const QRScannerDialog(),
-                  );
-                  
-                  // Si un URL a été scannée, on la met dans le champ
-                  if (scannedUrl != null && scannedUrl.isNotEmpty) {
-                    controller.text = scannedUrl;
-                  }
-                },
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // 🆕 Info bulle pour guider l'utilisateur
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Scannez le QR code généré depuis votre Google Sheets ou collez l\'URL manuellement',
-                    style: TextStyle(
-                      color: Colors.blue.shade700,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 12),
-          
-          if (_isGoogleConnected)
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.green.shade700, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Connecté',
-                    style: TextStyle(
-                      color: Colors.green.shade700,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(dialogContext),
-        child: const Text('Annuler'),
-      ),
-      FilledButton.icon(
-        onPressed: () async {
-          final url = controller.text.trim();
-          if (url.isNotEmpty) {
-            final database = AppDatabase();
-            final service = GoogleSheetsService(database);
-            
-            await service.saveScriptUrl(url);
-            
-            final isConnected = await service.testConnection();
-            
-            if (!mounted) return;
-            
-            setState(() {
-              _googleScriptUrl = url;
-              _isGoogleConnected = isConnected;
-            });
-            
-            Navigator.of(dialogContext).pop();
-            
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(isConnected 
-                    ? '✅ Connecté à Google Sheets' 
-                    : '⚠️ URL sauvegardée mais connexion échouée'),
-                backgroundColor: isConnected ? Colors.green : Colors.orange,
-              ),
-            );
-          }
-        },
-        icon: const Icon(Icons.save),
-        label: const Text('Enregistrer'),
-      ),
-    ],
-  ),
-);
-  }
-
-class QRScannerDialog extends StatefulWidget {
-  const QRScannerDialog({super.key});
-
-  @override
-  State<QRScannerDialog> createState() => _QRScannerDialogState();
-}
-
-class _QRScannerDialogState extends State<QRScannerDialog> {
-  bool _isScanning = true;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.all(16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: SizedBox(
-          height: 400,
-          width: double.infinity,
-          child: Stack(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.cloud, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Google Sheets'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 📷 Caméra scanner
-              MobileScanner(
-                onDetect: (capture) {
-                  if (!_isScanning) return;
-                  
-                  final List<Barcode> barcodes = capture.barcodes;
-                  for (final barcode in barcodes) {
-                    final String? url = barcode.rawValue;
-                    if (url != null && url.isNotEmpty) {
-                      setState(() => _isScanning = false);
-                      // Retourne l'URL scannée et ferme
-                      Navigator.pop(context, url);
-                      break;
-                    }
-                  }
-                },
+              // 🆕 Champ URL avec bouton QR à droite
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  labelText: 'URL du Script Google Apps',
+                  hintText: 'https://script.google.com/macros/s/.../exec',
+                  prefixIcon: const Icon(Icons.link),
+                  // 🆕 Bouton scan QR
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.qr_code_scanner, color: Colors.green),
+                    tooltip: 'Scanner un QR code',
+                    onPressed: () async {
+                      // Ouvre le scanner QR
+                      final scannedUrl = await showDialog<String>(
+                        context: dialogContext,
+                        builder: (context) => const QRScannerDialog(),
+                      );
+                      
+                      // Si un URL a été scannée, on la met dans le champ
+                      if (scannedUrl != null && scannedUrl.isNotEmpty) {
+                        controller.text = scannedUrl;
+                      }
+                    },
+                  ),
+                ),
               ),
               
-              // 🎨 Overlay design
+              const SizedBox(height: 16),
+              
+              // 🆕 Info bulle pour guider l'utilisateur
               Container(
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.5),
-                    width: 2,
-                  ),
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
                 ),
-              ),
-              
-              // 📍 Zone de scan (carré au centre)
-              Center(
-                child: Container(
-                  width: 250,
-                  height: 250,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.green, width: 2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.qr_code,
-                      size: 50,
-                      color: Colors.white54,
-                    ),
-                  ),
-                ),
-              ),
-              
-              // ✨ Coins animés (optionnel mais stylé)
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: ScannerOverlayPainter(),
-                ),
-              ),
-              
-              // 🔙 Bouton fermer
-              Positioned(
-                top: 16,
-                right: 16,
-                child: CircleAvatar(
-                  backgroundColor: Colors.black54,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-              ),
-              
-              // 💬 Instructions
-              Positioned(
-                bottom: 40,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Placez le QR code dans le cadre',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Scannez le QR code généré depuis votre Google Sheets ou collez l\'URL manuellement',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
+              
+              const SizedBox(height: 12),
+              
+              if (_isGoogleConnected)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green.shade700, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Connecté',
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Annuler'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              final url = controller.text.trim();
+              if (url.isNotEmpty) {
+                final database = AppDatabase();
+                final service = GoogleSheetsService(database);
+                
+                await service.saveScriptUrl(url);
+                
+                final isConnected = await service.testConnection();
+                
+                if (!mounted) return;
+                
+                setState(() {
+                  _googleScriptUrl = url;
+                  _isGoogleConnected = isConnected;
+                });
+                
+                Navigator.of(dialogContext).pop();
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(isConnected 
+                        ? '✅ Connecté à Google Sheets' 
+                        : '⚠️ URL sauvegardée mais connexion échouée'),
+                    backgroundColor: isConnected ? Colors.green : Colors.orange,
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.save),
+            label: const Text('Enregistrer'),
+          ),
+        ],
       ),
     );
   }
-}
-
-// 🎨 Painter pour les coins du scanner (optionnel)
-class ScannerOverlayPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.green
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
-
-    final centerX = size.width / 2;
-    final centerY = size.height / 2;
-    const scanArea = 250.0;
-    const cornerLength = 30.0;
-
-    // Coins du cadre de scan
-    final corners = [
-      // Haut gauche
-      Offset(centerX - scanArea/2, centerY - scanArea/2 + cornerLength),
-      Offset(centerX - scanArea/2, centerY - scanArea/2),
-      Offset(centerX - scanArea/2 + cornerLength, centerY - scanArea/2),
-      // Haut droite
-      Offset(centerX + scanArea/2 - cornerLength, centerY - scanArea/2),
-      Offset(centerX + scanArea/2, centerY - scanArea/2),
-      Offset(centerX + scanArea/2, centerY - scanArea/2 + cornerLength),
-      // Bas droite
-      Offset(centerX + scanArea/2, centerY + scanArea/2 - cornerLength),
-      Offset(centerX + scanArea/2, centerY + scanArea/2),
-      Offset(centerX + scanArea/2 - cornerLength, centerY + scanArea/2),
-      // Bas gauche
-      Offset(centerX - scanArea/2 + cornerLength, centerY + scanArea/2),
-      Offset(centerX - scanArea/2, centerY + scanArea/2),
-      Offset(centerX - scanArea/2, centerY + scanArea/2 - cornerLength),
-    ];
-
-    for (int i = 0; i < corners.length; i += 3) {
-      final path = Path()
-        ..moveTo(corners[i].dx, corners[i].dy)
-        ..lineTo(corners[i+1].dx, corners[i+1].dy)
-        ..lineTo(corners[i+2].dx, corners[i+2].dy);
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
 
   Future<void> _importFromGoogleSheets() async {
     setState(() {
@@ -786,7 +619,7 @@ class ScannerOverlayPainter extends CustomPainter {
           FilledButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _performCleanupOptimized(); // ✅ Version optimisée
+              await _performCleanupOptimized();
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.orange),
             child: const Text('Nettoyer'),
@@ -796,54 +629,49 @@ class ScannerOverlayPainter extends CustomPainter {
     );
   }
 
-  // ✅ VERSION OPTIMISÉE : Nettoyage rapide avec requête SQL unique
   Future<void> _performCleanupOptimized() async {
     setState(() {
-    _isLoading = true;
-    _loadingText = 'Suppression des données...';
-  });
-
-  final stopwatch = Stopwatch()..start();
-
-  try {
-    final database = AppDatabase();
-
-    await database.transaction(() async {
-      // 1️⃣ Supprimer les dépendances
-      await database.customUpdate('DELETE FROM inventory_items');
-
-      // 2️⃣ Supprimer les produits
-      final deleted = await database.customUpdate('DELETE FROM products');
-
-      print('Produits supprimés: $deleted');
+      _isLoading = true;
+      _loadingText = 'Suppression des données...';
     });
 
-    stopwatch.stop();
+    final stopwatch = Stopwatch()..start();
 
-    if (!mounted) return;
+    try {
+      final database = AppDatabase();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('🧹 Tous les produits supprimés en ${stopwatch.elapsed.inSeconds}s'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+      await database.transaction(() async {
+        await database.customUpdate('DELETE FROM inventory_items');
+        final deleted = await database.customUpdate('DELETE FROM products');
+        print('Produits supprimés: $deleted');
+      });
 
-    _loadStats();
+      stopwatch.stop();
 
-  } catch (e) {
-    if (!mounted) return;
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('❌ Erreur: $e'),
-        backgroundColor: Colors.red,
-      ),
-    );
-  } finally {
-    setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🧹 Tous les produits supprimés en ${stopwatch.elapsed.inSeconds}s'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      _loadStats();
+
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Erreur: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
-}
 
   void _showHelp() {
     showDialog(
@@ -867,6 +695,153 @@ class ScannerOverlayPainter extends CustomPainter {
             child: const Text('Fermer'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLASSES EXTERNES (hors de _SettingsScreenState)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class QRScannerDialog extends StatefulWidget {
+  const QRScannerDialog({super.key});
+
+  @override
+  State<QRScannerDialog> createState() => _QRScannerDialogState();
+}
+
+class _QRScannerDialogState extends State<QRScannerDialog> {
+  bool _isScanning = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: SizedBox(
+          height: 400,
+          width: double.infinity,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              MobileScanner(
+                onDetect: (capture) {
+                  if (!_isScanning) return;
+                  
+                  final List<Barcode> barcodes = capture.barcodes;
+                  for (final barcode in barcodes) {
+                    final String? url = barcode.rawValue;
+                    if (url != null && url.isNotEmpty) {
+                      setState(() => _isScanning = false);
+                      Navigator.pop(context, url);
+                      break;
+                    }
+                  }
+                },
+              ),
+              
+              const ScannerOverlay(),
+              
+              Positioned(
+                top: 16,
+                right: 16,
+                child: CircleAvatar(
+                  backgroundColor: Colors.black54,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ),
+              
+              Positioned(
+                bottom: 40,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Placez le QR code dans le cadre',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ScannerOverlay extends StatelessWidget {
+  const ScannerOverlay({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 250,
+        height: 250,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.green, width: 3),
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.transparent,
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              child: _buildCorner(true, true),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: _buildCorner(false, true),
+            ),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              child: _buildCorner(true, false),
+            ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: _buildCorner(false, false),
+            ),
+            const Center(
+              child: Icon(
+                Icons.qr_code_scanner,
+                size: 60,
+                color: Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCorner(bool isLeft, bool isTop) {
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        border: Border(
+          left: isLeft ? const BorderSide(color: Colors.green, width: 4) : BorderSide.none,
+          right: !isLeft ? const BorderSide(color: Colors.green, width: 4) : BorderSide.none,
+          top: isTop ? const BorderSide(color: Colors.green, width: 4) : BorderSide.none,
+          bottom: !isTop ? const BorderSide(color: Colors.green, width: 4) : BorderSide.none,
+        ),
       ),
     );
   }
