@@ -31,7 +31,7 @@ class AppTheme {
       // Material 3: AppBar
       appBarTheme: _buildAppBarTheme(colorScheme),
 
-      // Material 3: Cards
+      // CORRIGÉ: CardThemeData au lieu de CardTheme
       cardTheme: _buildCardTheme(colorScheme),
 
       // Material 3: Boutons
@@ -46,7 +46,7 @@ class AppTheme {
       // Material 3: Input
       inputDecorationTheme: _buildInputTheme(colorScheme),
 
-      // Material 3: Dialogs
+      // CORRIGÉ: DialogThemeData au lieu de DialogTheme
       dialogTheme: _buildDialogTheme(colorScheme),
 
       // Material 3: SnackBar
@@ -159,14 +159,20 @@ class AppTheme {
       canvasColor: colorScheme.surface,
       
       appBarTheme: _buildAppBarTheme(colorScheme),
+      
+      // CORRIGÉ: CardThemeData au lieu de CardTheme
       cardTheme: _buildCardTheme(colorScheme),
+      
       elevatedButtonTheme: _buildElevatedButtonTheme(colorScheme),
       filledButtonTheme: _buildFilledButtonTheme(colorScheme),
       outlinedButtonTheme: _buildOutlinedButtonTheme(colorScheme),
       textButtonTheme: _buildTextButtonTheme(colorScheme),
       floatingActionButtonTheme: _buildFabTheme(),
       inputDecorationTheme: _buildInputTheme(colorScheme),
+      
+      // CORRIGÉ: DialogThemeData au lieu de DialogTheme
       dialogTheme: _buildDialogTheme(colorScheme),
+      
       snackBarTheme: _buildSnackBarTheme(colorScheme),
       chipTheme: _buildChipTheme(colorScheme),
       navigationBarTheme: _buildNavigationBarTheme(colorScheme),
@@ -283,8 +289,9 @@ class AppTheme {
     );
   }
 
-  static CardTheme _buildCardTheme(ColorScheme colorScheme) {
-    return CardTheme(
+  // CORRIGÉ: Retourne CardThemeData au lieu de CardTheme
+  static CardThemeData _buildCardTheme(ColorScheme colorScheme) {
+    return CardThemeData(
       elevation: 1,
       surfaceTintColor: colorScheme.surfaceTint,
       color: colorScheme.surface,
@@ -461,8 +468,9 @@ class AppTheme {
     );
   }
 
-  static DialogTheme _buildDialogTheme(ColorScheme colorScheme) {
-    return DialogTheme(
+  // CORRIGÉ: Retourne DialogThemeData au lieu de DialogTheme
+  static DialogThemeData _buildDialogTheme(ColorScheme colorScheme) {
+    return DialogThemeData(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: colorScheme.surfaceTint,
       elevation: 0,
