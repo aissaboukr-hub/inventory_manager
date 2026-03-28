@@ -288,14 +288,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               
               const SizedBox(height: 16),
               
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                              ),
-              
               const SizedBox(height: 12),
               
               if (_isGoogleConnected)
@@ -345,7 +337,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _isGoogleConnected = isConnected;
                 });
                 
-                Navigator.pop(context);
+                Navigator.of(context, rootNavigator: true).pop();
                 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
