@@ -294,29 +294,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Comment configurer:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '1. Créez un Google Apps Script\n'
-                      '2. Déployez comme Web App\n'
-                      '3. Copiez l\'URL ici',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                              ),
               
               const SizedBox(height: 12),
               
