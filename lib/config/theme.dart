@@ -37,7 +37,6 @@ class AppTheme {
       // Material 3: Boutons
       elevatedButtonTheme: _buildElevatedButtonTheme(colorScheme),
       filledButtonTheme: _buildFilledButtonTheme(colorScheme),
-      // SUPPRIMÉ: filledButtonThemeData n'existe pas dans ThemeData
       outlinedButtonTheme: _buildOutlinedButtonTheme(colorScheme),
       textButtonTheme: _buildTextButtonTheme(colorScheme),
 
@@ -98,11 +97,12 @@ class AppTheme {
         overlayColor: colorScheme.primary.withOpacity(0.12),
       ),
 
-      // Material 3: Tabs
-      tabBarTheme: TabBarTheme(
+      // CORRIGÉ: TabBarThemeData au lieu de TabBarTheme
+      tabBarTheme: TabBarThemeData(
         labelColor: colorScheme.primary,
         unselectedLabelColor: colorScheme.onSurfaceVariant,
         indicatorColor: colorScheme.primary,
+        dividerColor: colorScheme.surfaceVariant,
       ),
 
       // Material 3: Bottom Sheet
@@ -162,7 +162,6 @@ class AppTheme {
       cardTheme: _buildCardTheme(colorScheme),
       elevatedButtonTheme: _buildElevatedButtonTheme(colorScheme),
       filledButtonTheme: _buildFilledButtonTheme(colorScheme),
-      // SUPPRIMÉ: filledButtonThemeData n'existe pas dans ThemeData
       outlinedButtonTheme: _buildOutlinedButtonTheme(colorScheme),
       textButtonTheme: _buildTextButtonTheme(colorScheme),
       floatingActionButtonTheme: _buildFabTheme(),
@@ -202,10 +201,12 @@ class AppTheme {
         overlayColor: colorScheme.primary.withOpacity(0.12),
       ),
       
-      tabBarTheme: TabBarTheme(
+      // CORRIGÉ: TabBarThemeData au lieu de TabBarTheme
+      tabBarTheme: TabBarThemeData(
         labelColor: colorScheme.primary,
         unselectedLabelColor: colorScheme.onSurfaceVariant,
         indicatorColor: colorScheme.primary,
+        dividerColor: colorScheme.surfaceVariant,
       ),
       
       bottomSheetTheme: BottomSheetThemeData(
@@ -333,8 +334,6 @@ class AppTheme {
       ),
     );
   }
-
-  // SUPPRIMÉ: _buildFilledButtonThemeData n'est plus nécessaire
 
   static OutlinedButtonThemeData _buildOutlinedButtonTheme(ColorScheme colorScheme) {
     return OutlinedButtonThemeData(
